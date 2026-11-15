@@ -48,6 +48,31 @@
     .live.err::before { background: var(--hot); }
     .wday .wcm { font-size: 0.72rem; color: var(--ice); font-weight: 700; margin-top: 0.1rem; }
     .wday .wcm.none { color: var(--slate); font-weight: 400; }
+
+    /* Snow ranking */
+    .snowbox { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 0.9rem 1rem; display: grid; gap: 0.55rem; }
+    .srow { display: grid; grid-template-columns: minmax(110px, 38%) 1fr 58px; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+    .srow .sn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .srow .sb { height: 14px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+    .srow .sb > div { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #38bdf8, var(--ice)); }
+    .srow.big .sb > div { background: linear-gradient(90deg, var(--ice), var(--lime)); }
+    .srow .sv { text-align: right; font-weight: 800; color: var(--ice); }
+    .srow.big .sv { color: var(--lime); }
+    .snow-legend { font-size: 0.72rem; color: var(--muted); }
+    .snow-empty { color: var(--muted); font-size: 0.9rem; padding: 0.5rem 0; }
+
+    /* Standout days */
+    .wday { position: relative; }
+    .wday .badge { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; font-weight: 900; letter-spacing: 0.06em;
+      padding: 0.12rem 0.45rem; border-radius: 99px; white-space: nowrap; color: #07101c; }
+    .wday.epic { border-color: var(--lime); background: linear-gradient(180deg, rgba(163,230,53,0.18), var(--card)); animation: glow 2.2s ease-in-out infinite; }
+    .wday.epic .badge { background: var(--lime); }
+    .wday.good { border-color: rgba(103,232,249,0.6); }
+    .wday.good .badge { background: var(--ice); }
+    @keyframes glow { 0%,100% { box-shadow: 0 0 0 rgba(163,230,53,0); } 50% { box-shadow: 0 0 22px rgba(163,230,53,0.45); } }
+    .alert { margin-top: 1rem; border-radius: 14px; padding: 0.7rem 1rem; font-weight: 700; background: linear-gradient(90deg, rgba(163,230,53,0.22), rgba(103,232,249,0.12)); border: 1px solid rgba(163,230,53,0.5); cursor: pointer; }
+    .alert span { font-weight: 400; color: #d9e6c8; }
+    .week { padding-top: 10px; }
     /* Hero */
     .hero {
       margin-top: 1.25rem; border-radius: 24px; padding: 1.75rem 1.5rem 1.5rem;
@@ -146,6 +171,7 @@
   </div>
 
   <div class="live" id="live">Loading live forecast…</div>
+  <div id="alert"></div>
   <section class="hero" id="hero"><p class="status">Checking the snow…</p></section>
 
   <div class="section-title"><span>This week · best spot per day</span><span>tap a day</span></div>
@@ -157,9 +183,8 @@
       <section class="spots" id="spots"></section>
     </div>
     <div>
-      <div class="section-title"><span>Map · dot size = pow score</span></div>
-      <div class="mapbox"><svg id="map" viewBox="0 0 620 400" aria-label="Map of ski areas around Salzburg"></svg>
-        <div class="map-note">Faded = outside your drive range. Positions approximate.</div></div>
+      <div class="section-title"><span id="snowTitle">Where the snow is</span></div>
+      <div class="snowbox" id="snowbox"></div>
       <div class="storm" id="storm"></div>
     </div>
   </div>
@@ -185,7 +210,7 @@
   </section>
 
   <footer>
-    Forecast: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0), model data at roughly the upper station's height. "Word on the street" is paraphrased from rider guides and forums (Powderhounds, PowderGuide, Fall-Line, ISPO, Skiresort.info, weekend.at), researched Nov 2026, not a live feed. Drive times are rough estimates.
+    Forecast: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0), model data at roughly the upper station's height. "Word on the street" is paraphrased from rider guides and forums (Powderhounds, PowderGuide, Fall-Line, ISPO, Skiresort.info, weekend.at), researched Nov 2026, not a live feed. Drive times are rough estimates. Only lift-served areas with known off-piste terrain are shown (freeride rating 3+ in <code>resorts.json</code>).
   </footer>
 </div>
 
@@ -256,6 +281,13 @@
     }
 
     const hr = champs[selDay], hd = F[hr.id].days[selDay];
+    let peak = 0;
+    champs.forEach((r, i) => { if (F[r.id].days[i].score > F[champs[peak].id].days[peak].score) peak = i; });
+    const pd = F[champs[peak].id].days[peak];
+    $("alert").innerHTML = pd.score >= 7
+      ? `<div class="alert" id="alertBtn">❄ Powder day ahead: ${dayName(pd.date, peak, true)} at ${champs[peak].name} <span>· ${pd.fresh} cm fresh · ${pd.tmax}° · pow score ${pd.score}</span></div>`
+      : "";
+    const ab = $("alertBtn"); if (ab) ab.onclick = () => { selDay = peak; render(); };
     const topSpots = bestOn(list, selDay).slice(0, 4);
     try {
     // Hero
@@ -285,7 +317,9 @@
     // Week strip
     $("week").innerHTML = champs.map((r, i) => {
       const d = F[r.id].days[i];
-      return `<button class="wday${i === selDay ? " sel" : ""}" data-i="${i}" title="${r.name}: ${d.score}/10, ${d.fresh} cm fresh">
+      const tier = d.score >= 7 ? "epic" : d.score >= 5 ? "good" : "";
+      return `<button class="wday${i === selDay ? " sel" : ""} ${tier}" data-i="${i}" title="${r.name}: ${d.score}/10, ${d.fresh} cm fresh">
+        ${tier ? `<span class="badge">${tier === "epic" ? "❄ POWDER DAY" : "GOOD"}</span>` : ""}
         <div class="dn">${i === 1 ? new Date(d.date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short" }) : dayName(d.date, i)}</div>
         <div class="ws" style="color:${color(d.score)}">${d.score}</div>
         <div class="wr">${d.score >= 1 ? r.name.split(/[–(\/]/)[0].trim() : "groomers"}</div>
@@ -323,26 +357,17 @@
 
     } catch (e) { console.error("render", e); }
     try {
-    // Map
-    const W = 620, H = 400, lon0 = 12.1, lon1 = 14.3, lat0 = 46.95, lat1 = 47.92;
-    const px = lon => (lon - lon0) / (lon1 - lon0) * W, py = lat => (lat1 - lat) / (lat1 - lat0) * H;
-    const sorted = [...RESORTS].filter(r => F[r.id]).sort((a, b) => F[a.id].days[selDay].score - F[b.id].days[selDay].score);
-    const labelIds = new Set(topSpots.slice(0, 3).map(r => r.id));
-    $("map").innerHTML = `
-      <defs><radialGradient id="glow"><stop offset="0" stop-color="#67e8f9" stop-opacity=".35"/><stop offset="1" stop-color="#67e8f9" stop-opacity="0"/></radialGradient></defs>
-      <path d="M0 ${H} L60 250 L120 300 L190 190 L250 260 L330 170 L400 240 L470 180 L540 250 L620 200 L620 ${H} Z" fill="rgba(255,255,255,0.03)"/>
-      <circle cx="${px(13.044)}" cy="${py(47.80)}" r="5" fill="#fff"/>
-      <text x="${px(13.044) + 9}" y="${py(47.80) + 4}" fill="#fff" font-size="13" font-weight="700">Salzburg</text>
-      ${sorted.map(r => {
-        const d = F[r.id].days[selDay], on = r.driveMin <= max;
-        const rad = 5 + d.score * 1.6, x = px(r.lon), y = py(r.lat);
-        return `<g opacity="${on ? 1 : 0.22}"><title>${r.name}: ${d.score}/10 · ${d.fresh} cm · ${fmtDrive(r.driveMin)}</title>
-          ${d.score >= 5 && on ? `<circle cx="${x}" cy="${y}" r="${rad * 2.2}" fill="url(#glow)"/>` : ""}
-          <circle cx="${x}" cy="${y}" r="${rad}" fill="${color(d.score)}" fill-opacity=".85" stroke="#070b18" stroke-width="1.5"/>
-          ${labelIds.has(r.id) && on ? `<text x="${x + rad + 4}" y="${y + 4}" fill="#e2e8f0" font-size="12" font-weight="600">${r.name.split(/[–(\/]/)[0].trim()}</text>` : ""}
-        </g>`;
-      }).join("")}`;
-
+    // Snow ranking for selected day
+    const snowy = list.map(r => ({ r, d: F[r.id].days[selDay] })).filter(x => x.d.fresh >= 2).sort((a, b) => b.d.fresh - a.d.fresh);
+    const maxCm = Math.max(15, ...snowy.map(x => x.d.fresh));
+    $("snowTitle").textContent = `Where the snow is · ${dayName(hd.date, selDay, true)}`;
+    $("snowbox").innerHTML = snowy.length ? snowy.map(({ r, d }) => `
+      <div class="srow${d.fresh >= 20 ? " big" : ""}" title="${r.name}: pow score ${d.score}, ${d.tmax}°, wind ${d.wind} km/h, ${fmtDrive(r.driveMin)}">
+        <div class="sn">${r.name.split(/[–(\/]/)[0].trim()}</div>
+        <div class="sb"><div style="width:${Math.max(4, d.fresh / maxCm * 100)}%"></div></div>
+        <div class="sv">${d.fresh} cm</div>
+      </div>`).join("") + `<div class="snow-legend">Fresh snow in the last 48 h by that morning. Green bars = 20 cm+. Spots without snow are hidden.</div>`
+      : `<div class="snow-empty">No freeride spot in range has fresh snow on this day.</div>`;
     } catch (e) { console.error("render", e); }
     try {
     // Storm note
@@ -371,6 +396,7 @@
     try {
       RESORTS = (await (await fetch("resorts.json?v=" + Date.now(), { cache: "no-store" })).json()).resorts;
       RESORTS.forEach(r => { r.says = r.says || []; r.hype = r.hype || 1; });
+      RESORTS = RESORTS.filter(r => r.freeride >= 3); // lift-served areas with known off-piste terrain only
       const params = new URLSearchParams({
         latitude: RESORTS.map(r => r.lat).join(","), longitude: RESORTS.map(r => r.lon).join(","),
         elevation: RESORTS.map(r => r.forecastElev).join(","),
@@ -380,7 +406,7 @@
       const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       let json = await res.json(); if (!Array.isArray(json)) json = [json];
-      json.forEach((loc, i) => F[RESORTS[i].id] = compute(RESORTS[i], loc.daily));
+      RESORTS.forEach((r, i) => { if (json[i] && json[i].daily) F[r.id] = compute(r, json[i].daily); });
       render();
       $("live").className = "live ok";
       $("live").textContent = `Live forecast · ${RESORTS.length} spots · updated ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
