@@ -42,6 +42,12 @@
     .drive output { font-weight: 800; min-width: 3.6rem; display: inline-block; }
     .drive input { accent-color: var(--ice); width: 160px; }
 
+    .live { margin-top: 1rem; font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 0.45rem; }
+    .live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--slate); }
+    .live.ok::before { background: var(--lime); box-shadow: 0 0 8px var(--lime); }
+    .live.err::before { background: var(--hot); }
+    .wday .wcm { font-size: 0.72rem; color: var(--ice); font-weight: 700; margin-top: 0.1rem; }
+    .wday .wcm.none { color: var(--slate); font-weight: 400; }
     /* Hero */
     .hero {
       margin-top: 1.25rem; border-radius: 24px; padding: 1.75rem 1.5rem 1.5rem;
@@ -139,6 +145,7 @@
     </div>
   </div>
 
+  <div class="live" id="live">Loading live forecast…</div>
   <section class="hero" id="hero"><p class="status">Checking the snow…</p></section>
 
   <div class="section-title"><span>This week · best spot per day</span><span>tap a day</span></div>
@@ -210,11 +217,11 @@
     const snow = d.snowfall_sum;
     const fresh = (snow[i - 2] || 0) * 0.6 + (snow[i - 1] || 0) + (snow[i] || 0) * 0.5;
     let s = Math.min(fresh, 40) / 40 * 7;
-    const tmax = d.temperature_2m_max[i];
+    const tmax = d.temperature_2m_max[i] ?? 0;
     if (tmax <= -4) s += 1.5; else if (tmax <= -1) s += 1; else if (tmax <= 1) s += 0; else if (tmax <= 3) s -= 1.5; else s -= 3;
-    const wind = d.wind_speed_10m_max[i];
+    const wind = d.wind_speed_10m_max[i] ?? 0;
     if (wind > 50) s -= 2; else if (wind > 35) s -= 1;
-    if (fresh >= 10) { if (d.weather_code[i] <= 2) s += 1; s += (freeride - 1) * 0.25; }
+    if (fresh >= 10) { if ((d.weather_code[i] ?? 3) <= 2) s += 1; s += (freeride - 1) * 0.25; }
     if (fresh < 5) s = Math.min(s, 2);
     return { score: Math.max(0, Math.min(10, Math.round(s * 10) / 10)), fresh: Math.round(fresh) };
   }
@@ -223,7 +230,7 @@
     const days = [];
     for (let i = 2; i < d.time.length; i++) {
       const { score, fresh } = scoreDay(d, i, r.freeride);
-      days.push({ date: d.time[i], snow: d.snowfall_sum[i], tmax: Math.round(d.temperature_2m_max[i]), wind: Math.round(d.wind_speed_10m_max[i]), dir: d.wind_direction_10m_dominant[i], code: d.weather_code[i], score, fresh });
+      days.push({ date: d.time[i], snow: d.snowfall_sum[i] ?? 0, tmax: Math.round(d.temperature_2m_max[i] ?? 0), wind: Math.round(d.wind_speed_10m_max[i] ?? 0), dir: d.wind_direction_10m_dominant[i], code: d.weather_code[i], score, fresh });
     }
     return { days, next72: days.slice(0, 3).reduce((a, x) => a + x.snow, 0) };
   }
@@ -248,15 +255,23 @@
       champs.forEach((r, i) => { if (F[r.id].days[i].score > F[champs[selDay].id].days[selDay].score + 0.5) selDay = i; });
     }
 
-    // Hero
     const hr = champs[selDay], hd = F[hr.id].days[selDay];
+    const topSpots = bestOn(list, selDay).slice(0, 4);
+    try {
+    // Hero
     const [vText, vClass] = verdict(hd.score);
     const flow = flowName(hd.dir);
+    let next = null;
+    list.forEach(r => F[r.id].days.forEach((d, i) => { if ((!next || d.snow > next.d.snow)) next = { r, d, i }; }));
+    const nextTxt = next && next.d.snow >= 1
+      ? `Biggest snowfall this week: <b style="color:var(--ice)">${Math.round(next.d.snow)} cm</b> on ${dayName(next.d.date, next.i, true)} at ${next.r.name}.`
+      : "No meaningful snowfall in the forecast yet.";
     $("hero").innerHTML = `
       <div class="kicker">${dayName(hd.date, selDay, true)} · ${new Date(hd.date + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
       <div class="verdict ${vClass}">${vText}</div>
       <div class="where">${hd.score >= 3 ? hr.name : "Best bet: " + hr.name}
-        <small>${fmtDrive(hr.driveMin)} from Salzburg · ${EXPOSURE[hr.exposure]} · ${flames(hr.hype)}</small></div>
+        <small>${fmtDrive(hr.driveMin)} from Salzburg · ${EXPOSURE[hr.exposure]} · ${flames(hr.hype)}</small>
+        ${hd.score < 5 ? `<small style="margin-top:.5rem;color:#c9d3ea">${nextTxt}</small>` : ""}</div>
       <div class="stats">
         <div class="stat"><b style="color:${color(hd.score)}">${hd.score}</b><span>pow score</span></div>
         <div class="stat"><b>${hd.fresh} cm</b><span>fresh (48 h)</span></div>
@@ -265,22 +280,26 @@
         ${flow && hd.snow >= 1 ? `<div class="stat"><b style="font-size:1rem">${flow}</b><span>storm flow</span></div>` : ""}
       </div>`;
 
+    } catch (e) { console.error("render", e); }
+    try {
     // Week strip
     $("week").innerHTML = champs.map((r, i) => {
       const d = F[r.id].days[i];
       return `<button class="wday${i === selDay ? " sel" : ""}" data-i="${i}" title="${r.name}: ${d.score}/10, ${d.fresh} cm fresh">
         <div class="dn">${i === 1 ? new Date(d.date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short" }) : dayName(d.date, i)}</div>
         <div class="ws" style="color:${color(d.score)}">${d.score}</div>
-        <div class="wr">${d.score >= 3 ? r.name.split(/[–(\/]/)[0].trim() : "groomers"}</div>
+        <div class="wr">${d.score >= 1 ? r.name.split(/[–(\/]/)[0].trim() : "groomers"}</div>
+        ${(() => { const mx = Math.max(...list.map(x => F[x.id].days[i].snow)); return `<div class="wcm${mx < 1 ? " none" : ""}">${mx < 1 ? "dry" : "❄ " + Math.round(mx) + " cm"}</div>`; })()}
         <div class="wbar" style="background:${color(d.score)}"></div>
       </button>`;
     }).join("");
     document.querySelectorAll(".wday").forEach(b => b.onclick = () => { selDay = +b.dataset.i; render(); });
 
+    } catch (e) { console.error("render", e); }
+    try {
     // Top spots for selected day
-    const top = bestOn(list, selDay).slice(0, 4);
     $("spotsTitle").textContent = `Top spots · ${dayName(hd.date, selDay, true)}`;
-    $("spots").innerHTML = top.map(r => {
+    $("spots").innerHTML = topSpots.map(r => {
       const d = F[r.id].days[selDay];
       const pct = d.score / 10, c = 2 * Math.PI * 26;
       const say = r.says[0];
@@ -302,11 +321,13 @@
       </article>`;
     }).join("");
 
+    } catch (e) { console.error("render", e); }
+    try {
     // Map
     const W = 620, H = 400, lon0 = 12.1, lon1 = 14.3, lat0 = 46.95, lat1 = 47.92;
     const px = lon => (lon - lon0) / (lon1 - lon0) * W, py = lat => (lat1 - lat) / (lat1 - lat0) * H;
     const sorted = [...RESORTS].filter(r => F[r.id]).sort((a, b) => F[a.id].days[selDay].score - F[b.id].days[selDay].score);
-    const labelIds = new Set(top.slice(0, 3).map(r => r.id));
+    const labelIds = new Set(topSpots.slice(0, 3).map(r => r.id));
     $("map").innerHTML = `
       <defs><radialGradient id="glow"><stop offset="0" stop-color="#67e8f9" stop-opacity=".35"/><stop offset="1" stop-color="#67e8f9" stop-opacity="0"/></radialGradient></defs>
       <path d="M0 ${H} L60 250 L120 300 L190 190 L250 260 L330 170 L400 240 L470 180 L540 250 L620 200 L620 ${H} Z" fill="rgba(255,255,255,0.03)"/>
@@ -322,6 +343,8 @@
         </g>`;
       }).join("")}`;
 
+    } catch (e) { console.error("render", e); }
+    try {
     // Storm note
     const groups = {};
     list.forEach(r => (groups[r.exposure] ||= []).push(F[r.id].next72));
@@ -329,20 +352,25 @@
     const flows = list.map(r => { const ds = F[r.id].days.slice(0, 3); const big = ds.reduce((a, x) => x.snow > a.snow ? x : a, ds[0]); return big.snow >= 2 ? flowName(big.dir) : null; }).filter(Boolean);
     const fc = flows.reduce((a, f) => (a[f] = (a[f] || 0) + 1, a), {});
     const mainFlow = Object.entries(fc).sort((a, b) => b[1] - a[1])[0];
-    $("storm").innerHTML = avg[0] && avg[0][1] >= 2
+    $("storm").innerHTML = avg[0] && avg[0][1] >= 5
       ? `Next 3 days: storm from <b>${mainFlow ? mainFlow[0] : "mixed directions"}</b>. The <b>${EXPOSURE[avg[0][0]].toLowerCase()}</b> gets the most, about ${Math.round(avg[0][1])} cm on average${avg[1] ? `, vs ${Math.round(avg[1][1])} cm for the ${EXPOSURE[avg[1][0]].toLowerCase()}` : ""}.`
-      : `Next 3 days: <b>no real storm</b> in range. Watch the week strip for the next one.`;
+      : avg[0] && avg[0][1] >= 1 ? `Next 3 days: only <b>light snow</b>, about ${Math.round(avg[0][1])} cm at most. Fine for a top-up, not a powder day.`
+      : `Next 3 days: <b>dry</b> in range. Watch the week strip for the next storm.`;
 
+    } catch (e) { console.error("render", e); }
+    try {
     // Full table
     const allSorted = bestOn(list, selDay);
     $("allTitle").textContent = `All ${list.length} spots in range`;
     $("table").innerHTML = `<tr><th>Spot</th><th>Drive</th><th>Rep</th>${F[list[0].id].days.map((d, i) => `<th>${dayName(d.date, i)}</th>`).join("")}</tr>` +
       allSorted.map(r => `<tr><td><a href="${r.url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${r.name}</a></td><td>${fmtDrive(r.driveMin)}</td><td>${flames(r.hype)}</td>${F[r.id].days.map(d => `<td title="${d.fresh} cm fresh, ${d.tmax}°, ${d.wind} km/h"><span class="cell" style="color:${color(d.score)}">${d.score}</span></td>`).join("")}</tr>`).join("");
+    } catch (e) { console.error("render", e); }
   }
 
   async function load() {
     try {
-      RESORTS = (await (await fetch("resorts.json")).json()).resorts;
+      RESORTS = (await (await fetch("resorts.json?v=" + Date.now(), { cache: "no-store" })).json()).resorts;
+      RESORTS.forEach(r => { r.says = r.says || []; r.hype = r.hype || 1; });
       const params = new URLSearchParams({
         latitude: RESORTS.map(r => r.lat).join(","), longitude: RESORTS.map(r => r.lon).join(","),
         elevation: RESORTS.map(r => r.forecastElev).join(","),
@@ -354,7 +382,10 @@
       let json = await res.json(); if (!Array.isArray(json)) json = [json];
       json.forEach((loc, i) => F[RESORTS[i].id] = compute(RESORTS[i], loc.daily));
       render();
+      $("live").className = "live ok";
+      $("live").textContent = `Live forecast · ${RESORTS.length} spots · updated ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
     } catch (e) {
+      $("live").className = "live err"; $("live").textContent = "Forecast unavailable";
       $("hero").innerHTML = `<p class="status">Couldn't load the forecast (${e.message}). Try refreshing.</p>`;
     }
   }
