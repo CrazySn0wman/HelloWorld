@@ -6,220 +6,206 @@
   <title>Powder Monitor · Salzburg</title>
   <style>
     :root {
-      --bg: #0b1220;
-      --panel: #131c2e;
-      --panel-2: #1a2540;
-      --line: rgba(148, 163, 184, 0.16);
-      --text: #e6edf7;
-      --muted: #8fa1bb;
-      --snow: #7dd3fc;
-      --good: #34d399;
-      --ok: #fbbf24;
-      --poor: #64748b;
-      --warn: #f87171;
+      --bg: #070b18;
+      --card: rgba(255, 255, 255, 0.05);
+      --card-2: rgba(255, 255, 255, 0.09);
+      --line: rgba(255, 255, 255, 0.10);
+      --text: #f4f7ff;
+      --muted: #93a0bd;
+      --ice: #67e8f9;
+      --lime: #a3e635;
+      --amber: #fbbf24;
+      --hot: #fb7185;
+      --slate: #475569;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(180deg, #0f1d36 0%, var(--bg) 420px);
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(103, 232, 249, 0.18), transparent 60%),
+        radial-gradient(900px 500px at -10% 10%, rgba(139, 92, 246, 0.20), transparent 60%),
+        var(--bg);
       color: var(--text);
+      min-height: 100vh;
       line-height: 1.45;
-      padding: 2rem 1.25rem 3rem;
     }
-    a { color: var(--snow); }
-    .wrap { max-width: 1100px; margin: 0 auto; }
-    .back { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
-    header { margin: 1rem 0 1.75rem; }
-    h1 { font-size: clamp(2rem, 6vw, 3rem); letter-spacing: -0.03em; }
-    h1 span { color: var(--snow); }
-    .lead { color: var(--muted); max-width: 680px; margin-top: 0.4rem; }
-    h2 { font-size: 1.15rem; margin: 2.25rem 0 0.9rem; }
+    a { color: var(--ice); }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 1.5rem 1.1rem 3rem; }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .brand { font-weight: 900; font-style: italic; letter-spacing: -0.02em; font-size: 1.15rem; text-transform: uppercase; }
+    .brand span { color: var(--ice); }
+    .back { color: var(--muted); font-size: 0.85rem; text-decoration: none; }
 
-    .controls {
-      display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: center;
-      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-      padding: 1rem 1.25rem;
+    /* Drive slider */
+    .drive { display: flex; align-items: center; gap: 0.8rem; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 0.45rem 1rem; }
+    .drive label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+    .drive output { font-weight: 800; min-width: 3.6rem; display: inline-block; }
+    .drive input { accent-color: var(--ice); width: 160px; }
+
+    /* Hero */
+    .hero {
+      margin-top: 1.25rem; border-radius: 24px; padding: 1.75rem 1.5rem 1.5rem;
+      background: linear-gradient(135deg, rgba(103, 232, 249, 0.16), rgba(139, 92, 246, 0.18) 60%, rgba(251, 113, 133, 0.12));
+      border: 1px solid var(--line); position: relative; overflow: hidden;
     }
-    .control { display: flex; flex-direction: column; gap: 0.35rem; min-width: 220px; flex: 1; }
-    .control label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .control output { font-weight: 700; color: var(--text); text-transform: none; letter-spacing: 0; }
-    input[type=range] { width: 100%; accent-color: var(--snow); }
-    select {
-      background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
-      border-radius: 8px; padding: 0.45rem 0.6rem; font-size: 0.95rem;
+    .hero::after {
+      content: ""; position: absolute; right: -40px; bottom: -60px; width: 340px; height: 200px; opacity: 0.25;
+      background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 340 200'><path d='M0 200 L90 70 L130 120 L200 20 L270 110 L300 80 L340 130 L340 200 Z' fill='white'/></svg>") no-repeat bottom right / contain;
     }
-    .meta { font-size: 0.8rem; color: var(--muted); }
+    .kicker { font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+    .verdict { font-size: clamp(2.6rem, 9vw, 5rem); font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.04em; line-height: 0.95; margin: 0.35rem 0 0.6rem; }
+    .v-send { background: linear-gradient(90deg, var(--lime), var(--ice)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .v-go { color: var(--ice); }
+    .v-maybe { color: var(--amber); }
+    .v-chill { color: var(--muted); }
+    .where { font-size: clamp(1.1rem, 3vw, 1.45rem); font-weight: 700; }
+    .where small { display: block; font-size: 0.9rem; color: var(--muted); font-weight: 400; margin-top: 0.15rem; }
+    .stats { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; position: relative; z-index: 1; }
+    .stat { background: rgba(7, 11, 24, 0.55); border: 1px solid var(--line); border-radius: 14px; padding: 0.55rem 0.9rem; min-width: 104px; }
+    .stat b { display: block; font-size: 1.45rem; font-weight: 900; line-height: 1.1; }
+    .stat span { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
-    .picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; }
-    .pick {
-      background: linear-gradient(135deg, #16325a, var(--panel));
-      border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.1rem;
+    /* Week strip */
+    .section-title { font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 2rem 0 0.75rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    .wday {
+      border: 1px solid var(--line); border-radius: 14px; padding: 0.6rem 0.35rem 0.55rem; text-align: center; cursor: pointer;
+      background: var(--card); transition: transform 0.12s, border-color 0.12s; color: var(--text); font: inherit;
     }
-    .pick .rank { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
-    .pick .name { font-weight: 700; font-size: 1.05rem; margin: 0.2rem 0; }
-    .pick .why { font-size: 0.85rem; color: var(--muted); }
+    .wday:hover { transform: translateY(-2px); }
+    .wday.sel { border-color: var(--ice); box-shadow: 0 0 0 1px var(--ice) inset; }
+    .wday .dn { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+    .wday .ws { font-size: 1.5rem; font-weight: 900; margin: 0.15rem 0; }
+    .wday .wr { font-size: 0.68rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wday .wbar { height: 4px; border-radius: 99px; margin: 0.4rem 0.3rem 0; }
 
-    .pattern { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
-    .group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 0.85rem 1rem; }
-    .group .g-name { font-weight: 600; }
-    .group .g-desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; }
-    .bar { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
-    .bar > div { height: 100%; background: var(--snow); border-radius: 99px; }
-    .group .g-val { font-size: 0.85rem; margin-top: 0.35rem; }
-    .flow-note { font-size: 0.9rem; color: var(--muted); margin-top: 0.75rem; }
+    /* Layout */
+    .two { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1rem; }
+    @media (max-width: 860px) { .two { grid-template-columns: 1fr; } .drive input { width: 120px; } }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 0.85rem; }
-    .card {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-      padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.7rem;
-    }
-    .card-top { display: flex; justify-content: space-between; gap: 0.75rem; }
-    .card h3 { font-size: 1rem; line-height: 1.3; }
-    .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
-    .tag { font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 99px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
-    .score { text-align: center; min-width: 74px; }
-    .score .num { font-size: 1.7rem; font-weight: 800; line-height: 1; }
-    .score .lbl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; }
-    .best { font-size: 0.85rem; color: var(--muted); }
-    .best strong { color: var(--text); }
+    /* Spot cards */
+    .spots { display: grid; gap: 0.75rem; }
+    .spot { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 1rem 1.1rem; display: grid; grid-template-columns: auto 1fr; gap: 0.9rem; }
+    .ring { width: 64px; height: 64px; }
+    .ring text { font-weight: 900; font-size: 20px; fill: var(--text); }
+    .spot h3 { font-size: 1.05rem; line-height: 1.25; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.35rem 0 0.5rem; }
+    .chip { font-size: 0.72rem; border-radius: 99px; padding: 0.15rem 0.55rem; background: var(--card-2); color: var(--muted); }
+    .chip.snow { color: var(--ice); font-weight: 700; }
+    .hype { letter-spacing: 1px; }
+    .says { font-size: 0.85rem; color: #c9d3ea; border-left: 2px solid var(--ice); padding-left: 0.6rem; margin-top: 0.3rem; }
+    .says a { font-size: 0.75rem; color: var(--muted); }
+    .quiet { font-size: 0.82rem; color: var(--muted); }
 
-    .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-    .day { background: var(--panel-2); border-radius: 8px; padding: 0.35rem 0.15rem; text-align: center; font-size: 0.7rem; }
-    .day.is-best { outline: 2px solid var(--good); }
-    .day .d { color: var(--muted); }
-    .day .sn { font-weight: 700; font-size: 0.85rem; color: var(--snow); margin: 0.15rem 0; }
-    .day .sn.zero { color: var(--poor); font-weight: 400; }
-    .day .t { color: var(--text); }
-    .day .w { color: var(--muted); }
-    .day .w.windy { color: var(--warn); }
-    .day .s { margin-top: 0.15rem; font-weight: 700; }
+    /* Map */
+    .mapbox { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 0.75rem; }
+    .mapbox svg { width: 100%; height: auto; display: block; }
+    .map-note { font-size: 0.75rem; color: var(--muted); padding: 0.35rem 0.4rem 0; }
+    .storm { margin-top: 0.75rem; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 0.9rem 1rem; font-size: 0.9rem; }
+    .storm b { color: var(--ice); }
 
-    .notes { font-size: 0.85rem; color: var(--muted); }
-    .card a.more { font-size: 0.8rem; }
+    /* Full list */
+    details.all { margin-top: 2rem; background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+    details.all summary { cursor: pointer; padding: 1rem 1.1rem; font-weight: 700; list-style: none; }
+    details.all summary::after { content: " ▾"; color: var(--muted); }
+    .table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .table th, .table td { padding: 0.5rem 0.6rem; text-align: center; border-top: 1px solid var(--line); }
+    .table th { color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; }
+    .table td:first-child, .table th:first-child { text-align: left; }
+    .table .cell { display: inline-block; min-width: 30px; border-radius: 6px; padding: 0.1rem 0.3rem; font-weight: 700; }
+    .scroll { overflow-x: auto; padding: 0 0.5rem 0.75rem; }
 
-    .c-good { color: var(--good); }
-    .c-ok { color: var(--ok); }
-    .c-poor { color: var(--poor); }
-
-    .guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.85rem; }
-    .guide article { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.15rem; }
-    .guide h3 { font-size: 0.95rem; margin-bottom: 0.4rem; }
-    .guide p, .guide li { font-size: 0.88rem; color: var(--muted); }
-    .guide ul { padding-left: 1.1rem; display: grid; gap: 0.3rem; }
-    .safety { border-color: rgba(248, 113, 113, 0.45) !important; }
-    .safety h3 { color: var(--warn); }
-
-    .status { color: var(--muted); padding: 1rem 0; }
-    footer { margin-top: 2.5rem; font-size: 0.78rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 1rem; }
-    footer ul { padding-left: 1.1rem; margin-top: 0.3rem; }
+    /* Info */
+    .info { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+    .info div { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 0.9rem 1rem; font-size: 0.85rem; color: #c9d3ea; }
+    .info h4 { font-size: 0.85rem; color: var(--text); margin-bottom: 0.35rem; }
+    .info .avy { border-color: rgba(251, 113, 133, 0.5); }
+    .info .avy h4 { color: var(--hot); }
+    footer { margin-top: 2rem; font-size: 0.75rem; color: var(--muted); }
+    .status { color: var(--muted); padding: 2rem 0; text-align: center; }
   </style>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="../">← Hello World</a>
-
-  <header>
-    <h1>Powder <span>Monitor</span></h1>
-    <p class="lead">Fresh snow, temperature and wind for Austrian ski areas within driving range of Salzburg, turned into a simple powder score for today and the next 6 days.</p>
-  </header>
-
-  <section class="controls">
-    <div class="control">
-      <label for="range">Max drive from Salzburg: <output id="rangeOut">1 h 30</output></label>
+  <div class="top">
+    <div>
+      <a class="back" href="../">← Hello World</a>
+      <div class="brand">Powder <span>Monitor</span> · Salzburg</div>
+    </div>
+    <div class="drive">
+      <label for="range">Max drive</label>
       <input id="range" type="range" min="30" max="120" step="5" value="90">
+      <output id="rangeOut">1 h 30</output>
     </div>
-    <div class="control" style="max-width:260px">
-      <label for="sort">Sort by</label>
-      <select id="sort">
-        <option value="best">Best day this week</option>
-        <option value="today">Today</option>
-        <option value="drive">Drive time</option>
-      </select>
+  </div>
+
+  <section class="hero" id="hero"><p class="status">Checking the snow…</p></section>
+
+  <div class="section-title"><span>This week · best spot per day</span><span>tap a day</span></div>
+  <section class="week" id="week"></section>
+
+  <div class="two">
+    <div>
+      <div class="section-title"><span id="spotsTitle">Top spots</span></div>
+      <section class="spots" id="spots"></section>
     </div>
-    <div class="meta" id="meta">Loading forecast…</div>
-  </section>
+    <div>
+      <div class="section-title"><span>Map · dot size = pow score</span></div>
+      <div class="mapbox"><svg id="map" viewBox="0 0 620 400" aria-label="Map of ski areas around Salzburg"></svg>
+        <div class="map-note">Faded = outside your drive range. Positions approximate.</div></div>
+      <div class="storm" id="storm"></div>
+    </div>
+  </div>
 
-  <h2>Top picks in range</h2>
-  <section class="picks" id="picks"><p class="status">Loading…</p></section>
+  <details class="all">
+    <summary id="allTitle">All spots</summary>
+    <div class="scroll"><table class="table" id="table"></table></div>
+  </details>
 
-  <h2>Where the next storm is aiming (next 3 days)</h2>
-  <section class="pattern" id="pattern"></section>
-  <p class="flow-note" id="flowNote"></p>
-
-  <h2>All resorts</h2>
-  <section class="grid" id="grid"><p class="status">Loading forecast…</p></section>
-
-  <h2>How to read powder around Salzburg</h2>
-  <section class="guide">
-    <article>
-      <h3>Storm direction decides who gets the snow</h3>
-      <ul>
-        <li><strong>Nordstau (NW–N flow):</strong> moist air piles up against the northern rim of the Alps. Fieberbrunn, Lofer, Hochkönig, Tennengebirge, Dachstein and Feuerkogel get the most. Inner valleys such as Großarl often stay dry.</li>
-        <li><strong>Südstau (S–SW flow):</strong> the snow falls south of the main ridge: Lungau, Katschberg, Sportgastein and the high Tauern. The north side often gets Föhn and nothing.</li>
-        <li><strong>Westerly flow:</strong> spreads snow more evenly, usually more on the north side.</li>
-      </ul>
-    </article>
-    <article>
-      <h3>What makes a good powder day</h3>
-      <ul>
-        <li><strong>Fresh snow:</strong> 20 cm+ in the last 48 hours is a real powder day; 10 cm is a nice top-up.</li>
-        <li><strong>Cold:</strong> below about −3 °C at the top, the snow stays light and dry. Above 0 °C it gets heavy fast.</li>
-        <li><strong>Little wind:</strong> strong wind strips ridges, packs the snow and builds slabs in the lee.</li>
-        <li><strong>Day after the storm:</strong> clearing skies after a snowfall overnight are the jackpot.</li>
-        <li><strong>Altitude:</strong> when the snow line is high, only the Kitzsteinhorn, Sportgastein and Obertauern get dry snow.</li>
-      </ul>
-    </article>
-    <article class="safety">
-      <h3>Before you leave the piste</h3>
-      <p>This page is a weather screen, not an avalanche forecast. Fresh snow plus wind is exactly when avalanche danger rises. Check the official bulletin every time, carry transceiver, shovel and probe, and use a local guide in terrain you don't know (strongly recommended at Krippenstein).</p>
-      <ul style="margin-top:0.5rem">
-        <li><a href="https://www.lawine.at/" target="_blank" rel="noopener">lawine.at</a>: all Austrian avalanche warning services</li>
-        <li><a href="https://avalanche.report/" target="_blank" rel="noopener">avalanche.report</a>: Tirol, South Tyrol, Trentino</li>
-      </ul>
-    </article>
-    <article>
-      <h3>How the score works</h3>
-      <p>For each day: snow from the previous two days and that day itself (weighted toward the most recent), plus a bonus for cold and clear skies, minus wind. Areas with more freeride terrain get a small bonus once there is real fresh snow. 10 = go now; 6+ = worth the drive; under 3 = groomers.</p>
-      <p style="margin-top:0.5rem">Forecasts are model output at about the upper station's height. They're good for spotting storms, less accurate for exact centimetres. Drive times are rough estimates for normal traffic.</p>
-    </article>
+  <section class="info">
+    <div>
+      <h4>How the pow score works</h4>
+      Snow from the last two days and the day itself (most weight on overnight), plus bonuses for cold and bluebird skies, minus wind. 7+ = send it, 5+ = worth the drive, 3+ = top-up, below = groomers. Ties go to spots with a bigger freeride reputation.
+    </div>
+    <div>
+      <h4>Who gets the snow</h4>
+      Storms from the NW–N (Nordstau) hit the northern rim: Fieberbrunn, Lofer, Hochkönig, Dachstein. Storms from the S–SW (Südstau) favour the Tauern ridge and Lungau. Cold and calm beats deep and windy.
+    </div>
+    <div class="avy">
+      <h4>Before you drop in</h4>
+      This is a weather screen, not an avalanche forecast. Check <a href="https://www.lawine.at/" target="_blank" rel="noopener">lawine.at</a> every time, carry beacon, shovel and probe, and ride unknown terrain with a guide.
+    </div>
   </section>
 
   <footer>
-    Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0). Resort notes are drawn from:
-    <ul>
-      <li><a href="https://www.salzkammergut.at/en/things-to-do/winter/freeriding.html" target="_blank" rel="noopener">Salzkammergut tourism: freeriding at Krippenstein</a></li>
-      <li><a href="https://www.austria.info/en/things-to-do/skiing-and-winter/skiing/freeriding" target="_blank" rel="noopener">Austria.info: freeriding in Austria</a></li>
-      <li><a href="https://www.salzburgerland.com/" target="_blank" rel="noopener">SalzburgerLand: Sportgastein freeride routes, Obertauern</a></li>
-      <li><a href="https://www.skiresort.info/best-ski-resorts/salzburg-salzburger-land/sorted/advanced-skiers" target="_blank" rel="noopener">Skiresort.info: freeride ratings, Salzburger Land</a></li>
-      <li><a href="https://www.salzburg24.at/" target="_blank" rel="noopener">Salzburg24 / GeoSphere Austria weather reports (Nordstau patterns)</a></li>
-    </ul>
+    Forecast: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0), model data at roughly the upper station's height. "Word on the street" is paraphrased from rider guides and forums (Powderhounds, PowderGuide, Fall-Line, ISPO, Skiresort.info, weekend.at), researched Nov 2026, not a live feed. Drive times are rough estimates.
   </footer>
 </div>
 
 <script>
-  const EXPOSURE = {
-    north: { label: "Northern rim", desc: "Wins in Nordstau (NW–N)" },
-    tauern: { label: "Tauern ridge", desc: "Snow from north and south" },
-    inner: { label: "Inner valley", desc: "Often misses Nordstau" },
-    south: { label: "South of Tauern", desc: "Wins in Südstau (S–SW)" }
-  };
+  const EXPOSURE = { north: "Northern rim", tauern: "Tauern ridge", inner: "Inner valley", south: "South of Tauern" };
+  let RESORTS = [], F = {}, selDay = null;
 
-  let RESORTS = [];
-  let FORECAST = {}; // id -> computed data
+  const $ = id => document.getElementById(id);
+  const fmtDrive = m => m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}` : `${m} min`;
+  const color = s => s >= 7 ? "var(--lime)" : s >= 5 ? "var(--ice)" : s >= 3 ? "var(--amber)" : "var(--slate)";
+  const flames = n => "🔥".repeat(n);
+  const dayName = (d, i, long) => i === 0 ? "Today" : i === 1 ? "Tomorrow" : new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: long ? "long" : "short" });
 
-  const fmtDrive = m => `${Math.floor(m / 60) ? Math.floor(m / 60) + " h " : ""}${String(m % 60).padStart(Math.floor(m / 60) ? 2 : 1, "0")}${Math.floor(m / 60) ? "" : " min"}`;
-  const scoreClass = s => s >= 6 ? "c-good" : s >= 3 ? "c-ok" : "c-poor";
-  const stars = n => "★".repeat(n) + "☆".repeat(5 - n);
-
+  function verdict(s) {
+    if (s >= 7) return ["Send it", "v-send"];
+    if (s >= 5) return ["Worth the drive", "v-go"];
+    if (s >= 3) return ["Top-up day", "v-maybe"];
+    return ["Groomer week", "v-chill"];
+  }
   function flowName(deg) {
-    if (deg == null) return "–";
+    if (deg == null) return null;
     if (deg >= 280 || deg < 30) return "NW–N (Nordstau)";
     if (deg >= 240) return "W";
     if (deg >= 150) return "S–SW (Südstau)";
     return "E";
   }
 
-  // Powder score for day i (daily arrays include 2 past days, so i >= 2)
   function scoreDay(d, i, freeride) {
     const snow = d.snowfall_sum;
     const fresh = (snow[i - 2] || 0) * 0.6 + (snow[i - 1] || 0) + (snow[i] || 0) * 0.5;
@@ -228,157 +214,151 @@
     if (tmax <= -4) s += 1.5; else if (tmax <= -1) s += 1; else if (tmax <= 1) s += 0; else if (tmax <= 3) s -= 1.5; else s -= 3;
     const wind = d.wind_speed_10m_max[i];
     if (wind > 50) s -= 2; else if (wind > 35) s -= 1;
-    if (fresh >= 10) {
-      if (d.weather_code[i] <= 2) s += 1;
-      s += (freeride - 1) * 0.25;
-    }
+    if (fresh >= 10) { if (d.weather_code[i] <= 2) s += 1; s += (freeride - 1) * 0.25; }
     if (fresh < 5) s = Math.min(s, 2);
     return { score: Math.max(0, Math.min(10, Math.round(s * 10) / 10)), fresh: Math.round(fresh) };
   }
 
-  function compute(resort, d) {
+  function compute(r, d) {
     const days = [];
     for (let i = 2; i < d.time.length; i++) {
-      const { score, fresh } = scoreDay(d, i, resort.freeride);
-      days.push({
-        date: d.time[i],
-        snow: Math.round(d.snowfall_sum[i] * 10) / 10,
-        tmax: Math.round(d.temperature_2m_max[i]),
-        tmin: Math.round(d.temperature_2m_min[i]),
-        wind: Math.round(d.wind_speed_10m_max[i]),
-        dir: d.wind_direction_10m_dominant[i],
-        code: d.weather_code[i],
-        score, fresh
-      });
+      const { score, fresh } = scoreDay(d, i, r.freeride);
+      days.push({ date: d.time[i], snow: d.snowfall_sum[i], tmax: Math.round(d.temperature_2m_max[i]), wind: Math.round(d.wind_speed_10m_max[i]), dir: d.wind_direction_10m_dominant[i], code: d.weather_code[i], score, fresh });
     }
-    let bestIdx = 0;
-    days.forEach((x, i) => { if (x.score > days[bestIdx].score) bestIdx = i; });
-    const next72 = days.slice(0, 3).reduce((a, x) => a + x.snow, 0);
-    const past48 = (d.snowfall_sum[0] || 0) + (d.snowfall_sum[1] || 0);
-    // flow during the biggest upcoming snow day
-    const snowiest = days.slice(0, 3).reduce((a, x) => x.snow > a.snow ? x : a, days[0]);
-    return { days, bestIdx, today: days[0].score, best: days[bestIdx], next72, past48, flow: snowiest.snow >= 2 ? flowName(snowiest.dir) : null };
+    return { days, next72: days.slice(0, 3).reduce((a, x) => a + x.snow, 0) };
   }
 
-  function dayLabel(dateStr, i) {
-    if (i === 0) return "Today";
-    return new Date(dateStr + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short" });
-  }
+  // rank value: forecast score, small nudge for reputation
+  const rankVal = (r, i) => F[r.id].days[i].score + (F[r.id].days[i].score >= 3 ? (r.hype - 3) * 0.25 : 0) - r.driveMin / 1000;
+
+  function inRange() { const max = +$("range").value; return RESORTS.filter(r => r.driveMin <= max && F[r.id]); }
+  function bestOn(list, i) { return [...list].sort((a, b) => rankVal(b, i) - rankVal(a, i)); }
 
   function render() {
-    const max = +document.getElementById("range").value;
-    document.getElementById("rangeOut").textContent = fmtDrive(max);
-    const sort = document.getElementById("sort").value;
+    const max = +$("range").value;
+    $("rangeOut").textContent = fmtDrive(max);
+    const list = inRange();
+    if (!list.length) { $("hero").innerHTML = `<p class="status">Nothing within ${fmtDrive(max)}. Slide further.</p>`; return; }
+    const nDays = F[list[0].id].days.length;
 
-    const list = RESORTS.filter(r => r.driveMin <= max && FORECAST[r.id]);
-    list.sort((a, b) => {
-      const A = FORECAST[a.id], B = FORECAST[b.id];
-      if (sort === "today") return B.today - A.today || a.driveMin - b.driveMin;
-      if (sort === "drive") return a.driveMin - b.driveMin;
-      return B.best.score - A.best.score || a.driveMin - b.driveMin;
-    });
+    // per-day champion
+    const champs = Array.from({ length: nDays }, (_, i) => bestOn(list, i)[0]);
+    if (selDay == null) {
+      selDay = 0;
+      champs.forEach((r, i) => { if (F[r.id].days[i].score > F[champs[selDay].id].days[selDay].score + 0.5) selDay = i; });
+    }
 
-    // Top picks
-    const picks = [...list].sort((a, b) => FORECAST[b.id].best.score - FORECAST[a.id].best.score || a.driveMin - b.driveMin).slice(0, 3);
-    document.getElementById("picks").innerHTML = picks.length ? picks.map((r, i) => {
-      const f = FORECAST[r.id];
-      const b = f.best;
-      const when = f.bestIdx === 0 ? "today" : dayLabel(b.date, f.bestIdx);
-      return `<div class="pick">
-        <div class="rank">#${i + 1} · ${fmtDrive(r.driveMin)} drive</div>
-        <div class="name">${r.name}</div>
-        <div class="why"><span class="${scoreClass(b.score)}"><strong>${b.score}/10</strong></span> best on <strong>${when}</strong> · ~${b.fresh} cm fresh · ${b.tmax}° max · wind ${b.wind} km/h</div>
+    // Hero
+    const hr = champs[selDay], hd = F[hr.id].days[selDay];
+    const [vText, vClass] = verdict(hd.score);
+    const flow = flowName(hd.dir);
+    $("hero").innerHTML = `
+      <div class="kicker">${dayName(hd.date, selDay, true)} · ${new Date(hd.date + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div>
+      <div class="verdict ${vClass}">${vText}</div>
+      <div class="where">${hd.score >= 3 ? hr.name : "Best bet: " + hr.name}
+        <small>${fmtDrive(hr.driveMin)} from Salzburg · ${EXPOSURE[hr.exposure]} · ${flames(hr.hype)}</small></div>
+      <div class="stats">
+        <div class="stat"><b style="color:${color(hd.score)}">${hd.score}</b><span>pow score</span></div>
+        <div class="stat"><b>${hd.fresh} cm</b><span>fresh (48 h)</span></div>
+        <div class="stat"><b>${hd.tmax}°</b><span>max at top</span></div>
+        <div class="stat"><b>${hd.wind}</b><span>wind km/h</span></div>
+        ${flow && hd.snow >= 1 ? `<div class="stat"><b style="font-size:1rem">${flow}</b><span>storm flow</span></div>` : ""}
       </div>`;
-    }).join("") : `<p class="status">No resorts in this range.</p>`;
 
-    // Storm pattern by exposure group (all resorts, not only in range, to show the pattern)
-    const groups = {};
-    RESORTS.forEach(r => {
-      const f = FORECAST[r.id]; if (!f) return;
-      (groups[r.exposure] ||= []).push(f.next72);
-    });
-    const avg = Object.fromEntries(Object.entries(groups).map(([k, v]) => [k, v.reduce((a, x) => a + x, 0) / v.length]));
-    const top = Math.max(1, ...Object.values(avg));
-    document.getElementById("pattern").innerHTML = Object.keys(EXPOSURE).filter(k => avg[k] != null).map(k => `
-      <div class="group">
-        <div class="g-name">${EXPOSURE[k].label}</div>
-        <div class="g-desc">${EXPOSURE[k].desc}</div>
-        <div class="bar"><div style="width:${Math.round(avg[k] / top * 100)}%"></div></div>
-        <div class="g-val">${avg[k].toFixed(1)} cm average</div>
-      </div>`).join("");
-    const flows = RESORTS.map(r => FORECAST[r.id]?.flow).filter(Boolean);
-    const flowCount = flows.reduce((a, f) => (a[f] = (a[f] || 0) + 1, a), {});
-    const mainFlow = Object.entries(flowCount).sort((a, b) => b[1] - a[1])[0];
-    document.getElementById("flowNote").textContent = mainFlow
-      ? `Main wind direction during the coming snowfall: ${mainFlow[0]}.`
-      : "No significant snowfall expected in the next 3 days.";
+    // Week strip
+    $("week").innerHTML = champs.map((r, i) => {
+      const d = F[r.id].days[i];
+      return `<button class="wday${i === selDay ? " sel" : ""}" data-i="${i}" title="${r.name}: ${d.score}/10, ${d.fresh} cm fresh">
+        <div class="dn">${i === 1 ? new Date(d.date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short" }) : dayName(d.date, i)}</div>
+        <div class="ws" style="color:${color(d.score)}">${d.score}</div>
+        <div class="wr">${d.score >= 3 ? r.name.split(/[–(\/]/)[0].trim() : "groomers"}</div>
+        <div class="wbar" style="background:${color(d.score)}"></div>
+      </button>`;
+    }).join("");
+    document.querySelectorAll(".wday").forEach(b => b.onclick = () => { selDay = +b.dataset.i; render(); });
 
-    // Cards
-    document.getElementById("grid").innerHTML = list.length ? list.map(r => {
-      const f = FORECAST[r.id];
-      const bestWhen = f.bestIdx === 0 ? "today" : dayLabel(f.best.date, f.bestIdx);
-      return `<article class="card">
-        <div class="card-top">
-          <div>
-            <h3>${r.name}</h3>
-            <div class="tags">
-              <span class="tag">🚗 ${fmtDrive(r.driveMin)}</span>
-              <span class="tag" title="${EXPOSURE[r.exposure].desc}">${EXPOSURE[r.exposure].label}</span>
-              <span class="tag" title="Freeride terrain">${stars(r.freeride)}</span>
-              <span class="tag">${r.forecastElev} m</span>
-            </div>
+    // Top spots for selected day
+    const top = bestOn(list, selDay).slice(0, 4);
+    $("spotsTitle").textContent = `Top spots · ${dayName(hd.date, selDay, true)}`;
+    $("spots").innerHTML = top.map(r => {
+      const d = F[r.id].days[selDay];
+      const pct = d.score / 10, c = 2 * Math.PI * 26;
+      const say = r.says[0];
+      return `<article class="spot">
+        <svg class="ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,.1)" stroke-width="6" fill="none"/>
+          <circle cx="32" cy="32" r="26" stroke="${color(d.score)}" stroke-width="6" fill="none" stroke-linecap="round"
+            stroke-dasharray="${c * pct} ${c}" transform="rotate(-90 32 32)"/>
+          <text x="32" y="39" text-anchor="middle">${Math.round(d.score)}</text></svg>
+        <div>
+          <h3>${r.name}</h3>
+          <div class="chips">
+            <span class="chip snow">❄ ${d.fresh} cm</span>
+            <span class="chip">${d.tmax}° · ${d.wind} km/h</span>
+            <span class="chip">🚗 ${fmtDrive(r.driveMin)}</span>
+            <span class="chip hype" title="Freeride reputation">${flames(r.hype)}</span>
           </div>
-          <div class="score">
-            <div class="num ${scoreClass(f.today)}">${f.today}</div>
-            <div class="lbl">today</div>
-          </div>
+          ${say ? `<div class="says">“${say.text}” <a href="${say.url}" target="_blank" rel="noopener">${say.source}</a></div>` : `<div class="quiet">${r.notes}</div>`}
         </div>
-        <div class="best">Best: <strong class="${scoreClass(f.best.score)}">${f.best.score}/10 ${bestWhen}</strong> · last 48 h: <strong>${Math.round(f.past48)} cm</strong> · next 72 h: <strong>${Math.round(f.next72)} cm</strong></div>
-        <div class="days">
-          ${f.days.map((x, i) => `<div class="day${i === f.bestIdx && x.score >= 3 ? " is-best" : ""}" title="${x.date}: ${x.snow} cm, ${x.tmin}…${x.tmax} °C, wind ${x.wind} km/h ${flowName(x.dir)}, score ${x.score}">
-            <div class="d">${dayLabel(x.date, i)}</div>
-            <div class="sn${x.snow < 0.5 ? " zero" : ""}">${x.snow < 0.5 ? "–" : Math.round(x.snow) + "cm"}</div>
-            <div class="t">${x.tmax}°</div>
-            <div class="w${x.wind > 40 ? " windy" : ""}">${x.wind}</div>
-            <div class="s ${scoreClass(x.score)}">${x.score}</div>
-          </div>`).join("")}
-        </div>
-        <p class="notes">${r.notes}</p>
-        <a class="more" href="${r.url}" target="_blank" rel="noopener">Resort website ↗</a>
       </article>`;
-    }).join("") : `<p class="status">No resorts within ${fmtDrive(max)}. Move the slider right.</p>`;
+    }).join("");
 
-    document.getElementById("meta").textContent = `${list.length} of ${RESORTS.length} resorts in range · rows: snow (cm), max temp (°C), wind (km/h), score`;
+    // Map
+    const W = 620, H = 400, lon0 = 12.1, lon1 = 14.3, lat0 = 46.95, lat1 = 47.92;
+    const px = lon => (lon - lon0) / (lon1 - lon0) * W, py = lat => (lat1 - lat) / (lat1 - lat0) * H;
+    const sorted = [...RESORTS].filter(r => F[r.id]).sort((a, b) => F[a.id].days[selDay].score - F[b.id].days[selDay].score);
+    const labelIds = new Set(top.slice(0, 3).map(r => r.id));
+    $("map").innerHTML = `
+      <defs><radialGradient id="glow"><stop offset="0" stop-color="#67e8f9" stop-opacity=".35"/><stop offset="1" stop-color="#67e8f9" stop-opacity="0"/></radialGradient></defs>
+      <path d="M0 ${H} L60 250 L120 300 L190 190 L250 260 L330 170 L400 240 L470 180 L540 250 L620 200 L620 ${H} Z" fill="rgba(255,255,255,0.03)"/>
+      <circle cx="${px(13.044)}" cy="${py(47.80)}" r="5" fill="#fff"/>
+      <text x="${px(13.044) + 9}" y="${py(47.80) + 4}" fill="#fff" font-size="13" font-weight="700">Salzburg</text>
+      ${sorted.map(r => {
+        const d = F[r.id].days[selDay], on = r.driveMin <= max;
+        const rad = 5 + d.score * 1.6, x = px(r.lon), y = py(r.lat);
+        return `<g opacity="${on ? 1 : 0.22}"><title>${r.name}: ${d.score}/10 · ${d.fresh} cm · ${fmtDrive(r.driveMin)}</title>
+          ${d.score >= 5 && on ? `<circle cx="${x}" cy="${y}" r="${rad * 2.2}" fill="url(#glow)"/>` : ""}
+          <circle cx="${x}" cy="${y}" r="${rad}" fill="${color(d.score)}" fill-opacity=".85" stroke="#070b18" stroke-width="1.5"/>
+          ${labelIds.has(r.id) && on ? `<text x="${x + rad + 4}" y="${y + 4}" fill="#e2e8f0" font-size="12" font-weight="600">${r.name.split(/[–(\/]/)[0].trim()}</text>` : ""}
+        </g>`;
+      }).join("")}`;
+
+    // Storm note
+    const groups = {};
+    list.forEach(r => (groups[r.exposure] ||= []).push(F[r.id].next72));
+    const avg = Object.entries(groups).map(([k, v]) => [k, v.reduce((a, x) => a + x, 0) / v.length]).sort((a, b) => b[1] - a[1]);
+    const flows = list.map(r => { const ds = F[r.id].days.slice(0, 3); const big = ds.reduce((a, x) => x.snow > a.snow ? x : a, ds[0]); return big.snow >= 2 ? flowName(big.dir) : null; }).filter(Boolean);
+    const fc = flows.reduce((a, f) => (a[f] = (a[f] || 0) + 1, a), {});
+    const mainFlow = Object.entries(fc).sort((a, b) => b[1] - a[1])[0];
+    $("storm").innerHTML = avg[0] && avg[0][1] >= 2
+      ? `Next 3 days: storm from <b>${mainFlow ? mainFlow[0] : "mixed directions"}</b>. The <b>${EXPOSURE[avg[0][0]].toLowerCase()}</b> gets the most, about ${Math.round(avg[0][1])} cm on average${avg[1] ? `, vs ${Math.round(avg[1][1])} cm for the ${EXPOSURE[avg[1][0]].toLowerCase()}` : ""}.`
+      : `Next 3 days: <b>no real storm</b> in range. Watch the week strip for the next one.`;
+
+    // Full table
+    const allSorted = bestOn(list, selDay);
+    $("allTitle").textContent = `All ${list.length} spots in range`;
+    $("table").innerHTML = `<tr><th>Spot</th><th>Drive</th><th>Rep</th>${F[list[0].id].days.map((d, i) => `<th>${dayName(d.date, i)}</th>`).join("")}</tr>` +
+      allSorted.map(r => `<tr><td><a href="${r.url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${r.name}</a></td><td>${fmtDrive(r.driveMin)}</td><td>${flames(r.hype)}</td>${F[r.id].days.map(d => `<td title="${d.fresh} cm fresh, ${d.tmax}°, ${d.wind} km/h"><span class="cell" style="color:${color(d.score)}">${d.score}</span></td>`).join("")}</tr>`).join("");
   }
 
   async function load() {
     try {
-      const data = await (await fetch("resorts.json")).json();
-      RESORTS = data.resorts;
+      RESORTS = (await (await fetch("resorts.json")).json()).resorts;
       const params = new URLSearchParams({
-        latitude: RESORTS.map(r => r.lat).join(","),
-        longitude: RESORTS.map(r => r.lon).join(","),
+        latitude: RESORTS.map(r => r.lat).join(","), longitude: RESORTS.map(r => r.lon).join(","),
         elevation: RESORTS.map(r => r.forecastElev).join(","),
-        daily: "snowfall_sum,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_direction_10m_dominant,weather_code",
-        timezone: "Europe/Vienna",
-        past_days: "2",
-        forecast_days: "7"
+        daily: "snowfall_sum,temperature_2m_max,wind_speed_10m_max,wind_direction_10m_dominant,weather_code",
+        timezone: "Europe/Vienna", past_days: "2", forecast_days: "7"
       });
       const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      let json = await res.json();
-      if (!Array.isArray(json)) json = [json];
-      json.forEach((loc, i) => { FORECAST[RESORTS[i].id] = compute(RESORTS[i], loc.daily); });
+      let json = await res.json(); if (!Array.isArray(json)) json = [json];
+      json.forEach((loc, i) => F[RESORTS[i].id] = compute(RESORTS[i], loc.daily));
       render();
-    } catch (err) {
-      document.getElementById("grid").innerHTML = `<p class="status">Couldn't load the forecast (${err.message}). Try refreshing.</p>`;
-      document.getElementById("picks").innerHTML = "";
-      document.getElementById("meta").textContent = "Forecast unavailable";
+    } catch (e) {
+      $("hero").innerHTML = `<p class="status">Couldn't load the forecast (${e.message}). Try refreshing.</p>`;
     }
   }
-
-  document.getElementById("range").addEventListener("input", render);
-  document.getElementById("sort").addEventListener("change", render);
+  $("range").addEventListener("input", () => { render(); });
   load();
 </script>
 </body>
