@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hello World · Salzburg Weather</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --warm: #fb923c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at top, #1e3a5f 0%, var(--bg) 60%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4rem 1.25rem 2rem;
+    }
+    h1 {
+      font-size: clamp(2.5rem, 8vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(90deg, var(--accent), var(--warm));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .subtitle { color: var(--muted); margin: 0.5rem 0 3rem; font-size: 1.1rem; }
+    .forecast {
+      width: 100%;
+      max-width: 960px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.75rem;
+    }
+    .day {
+      background: var(--card);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 14px;
+      padding: 1.1rem 0.75rem;
+      text-align: center;
+    }
+    .day.today { border-color: var(--accent); }
+    .day-name { font-weight: 600; }
+    .date { color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem; }
+    .icon { font-size: 2.4rem; margin: 0.6rem 0 0.3rem; }
+    .desc { color: var(--muted); font-size: 0.8rem; min-height: 2.2em; }
+    .temps { margin-top: 0.5rem; font-size: 1.05rem; }
+    .max { color: var(--warm); font-weight: 700; }
+    .min { color: var(--accent); margin-left: 0.4rem; }
+    .rain { color: var(--muted); font-size: 0.8rem; margin-top: 0.35rem; }
+    .status { color: var(--muted); text-align: center; grid-column: 1 / -1; }
+    footer { margin-top: auto; padding-top: 3rem; color: var(--muted); font-size: 0.8rem; }
+    footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>Hello, World!</h1>
+  <p class="subtitle">The week ahead in Salzburg, Austria</p>
+
+  <section class="forecast" id="forecast">
+    <p class="status">Loading forecast…</p>
+  </section>
+
+  <footer>
+    Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>
+  </footer>
+
+  <script>
+    const SALZBURG = { lat: 47.8095, lon: 13.0550 };
+
+    // WMO weather codes → icon + label
+    const WEATHER = {
+      0: ["☀️", "Clear sky"],
+      1: ["🌤️", "Mainly clear"],
+      2: ["⛅", "Partly cloudy"],
+      3: ["☁️", "Overcast"],
+      45: ["🌫️", "Fog"], 48: ["🌫️", "Rime fog"],
+      51: ["🌦️", "Light drizzle"], 53: ["🌦️", "Drizzle"], 55: ["🌧️", "Heavy drizzle"],
+      56: ["🌧️", "Freezing drizzle"], 57: ["🌧️", "Freezing drizzle"],
+      61: ["🌦️", "Light rain"], 63: ["🌧️", "Rain"], 65: ["🌧️", "Heavy rain"],
+      66: ["🌧️", "Freezing rain"], 67: ["🌧️", "Freezing rain"],
+      71: ["🌨️", "Light snow"], 73: ["🌨️", "Snow"], 75: ["❄️", "Heavy snow"],
+      77: ["🌨️", "Snow grains"],
+      80: ["🌦️", "Rain showers"], 81: ["🌧️", "Rain showers"], 82: ["⛈️", "Violent showers"],
+      85: ["🌨️", "Snow showers"], 86: ["❄️", "Heavy snow showers"],
+      95: ["⛈️", "Thunderstorm"], 96: ["⛈️", "Thunderstorm, hail"], 99: ["⛈️", "Thunderstorm, hail"]
+    };
+
+    function describe(code) {
+      return WEATHER[code] || ["🌡️", "Unknown"];
+    }
+
+    function renderDay(date, code, max, min, rain, isToday) {
+      const [icon, label] = describe(code);
+      const d = new Date(date + "T12:00:00");
+      const dayName = isToday ? "Today" : d.toLocaleDateString("en-GB", { weekday: "short" });
+      const dateLabel = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+      return `
+        <article class="day${isToday ? " today" : ""}">
+          <div class="day-name">${dayName}</div>
+          <div class="date">${dateLabel}</div>
+          <div class="icon" aria-hidden="true">${icon}</div>
+          <div class="desc">${label}</div>
+          <div class="temps">
+            <span class="max">${Math.round(max)}°</span><span class="min">${Math.round(min)}°</span>
+          </div>
+          <div class="rain">💧 ${rain ?? 0}%</div>
+        </article>`;
+    }
+
+    async function loadForecast() {
+      const el = document.getElementById("forecast");
+      const url = "https://api.open-meteo.com/v1/forecast"
+        + `?latitude=${SALZBURG.lat}&longitude=${SALZBURG.lon}`
+        + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+        + "&timezone=Europe%2FVienna&forecast_days=7";
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { daily } = await res.json();
+        el.innerHTML = daily.time.map((date, i) => renderDay(
+          date,
+          daily.weather_code[i],
+          daily.temperature_2m_max[i],
+          daily.temperature_2m_min[i],
+          daily.precipitation_probability_max[i],
+          i === 0
+        )).join("");
+      } catch (err) {
+        el.innerHTML = `<p class="status">Couldn't load the forecast (${err.message}). Try refreshing.</p>`;
+      }
+    }
+
+    loadForecast();
+  </script>
+</body>
+</html>
