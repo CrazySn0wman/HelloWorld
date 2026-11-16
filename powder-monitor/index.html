@@ -177,6 +177,7 @@
     /* Map */
     .mapbox { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 0.5rem; }
     #map { height: 380px; border-radius: 14px; background: #0b1020; }
+    .leaflet-control-attribution { background: rgba(7,11,24,0.75) !important; color: var(--muted) !important; font-size: 0.65rem; }
     .darktiles { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6); }
     .map-note { font-size: 0.75rem; color: var(--muted); padding: 0.4rem 0.4rem 0.1rem; }
     .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #111830; color: var(--text); }
@@ -321,11 +322,13 @@ const S = Object.assign({
   sport: "snow",
   level: { snow: SPORTS.snow.defLevel, surf: SPORTS.surf.defLevel, kite: SPORTS.kite.defLevel },
   range: { snow: SPORTS.snow.rangeDef, surf: SPORTS.surf.rangeDef, kite: SPORTS.kite.rangeDef },
-  origin: null, weight: 75
+  origins: null, weight: 75
 }, saved || {});
-const firstVisit = !saved || !S.origin;
-if (!S.origin) S.origin = { ...SALZBURG };
-const save = () => store.set({ sport: S.sport, level: S.level, range: S.range, origin: S.origin, weight: S.weight });
+const firstVisit = !saved || (!S.origins && !S["origin"]);
+if (!S.origins) { const o = S["origin"] || { ...SALZBURG }; S.origins = { snow: { ...o }, surf: { ...o }, kite: { ...o } }; }   // migrate old single origin
+delete S["origin"];
+const O = () => S.origins[S.sport];   // start point of the current sport
+const save = () => store.set({ sport: S.sport, level: S.level, range: S.range, origins: S.origins, weight: S.weight });
 
 const DATA = { snow: null, surf: null, kite: null };   // { spots, raw: {id: {...}} }
 const CUSTOM = { snow: null, surf: null, kite: null };  // pinned point per sport
@@ -350,8 +353,8 @@ function km(a, b) {
   return 2 * R * Math.asin(Math.sqrt(x));
 }
 function driveMin(s) {
-  if (s.driveMin && km(S.origin, SALZBURG) < 15) return s.driveMin;      // curated drive times from Salzburg
-  const k = km(S.origin, s);
+  if (s.driveMin && km(O(), SALZBURG) < 15) return s.driveMin;      // curated drive times from Salzburg
+  const k = km(O(), s);
   return Math.round((k * 1.3) / (k > 300 ? 90 : 75) * 60 / 5) * 5 + 10;    // rough road estimate
 }
 function verdict(s) {
@@ -470,7 +473,12 @@ function scoreSnow(x, level, spot) {
   fk = null;
   if (level !== "beginner" && (x.fresh >= 40 || (x.fresh >= 20 && x.wind >= 30)))
     add("warn", "Lots of new snow + wind = higher avalanche danger. Check lawine.at before going off-piste");
-  if (level === "advanced" && (spot.freeride || 0) >= 4 && x.fresh >= 10) add("good", "Serious freeride terrain here");
+  if (level === "advanced" && (spot.freeride || 0) >= 4 && x.fresh >= 10 && !spot.estFreeride) add("good", "Serious freeride terrain here");
+  if (level === "beginner" && spot.kmE != null && spot.km > 0) {
+    const share = spot.kmE / spot.km;
+    if (spot.kmE >= 10 && share >= 0.25) add("good", `Plenty of easy slopes (${Math.round(spot.kmE)} km)`);
+    else if (spot.kmE < 3) add("warn", `Few easy slopes (${Math.round(spot.kmE)} km) — mostly for confident riders`);
+  }
 
   return { score: r1(clamp(s, 0, 10)), R };
 }
@@ -702,7 +710,23 @@ async function loadSport(sport) {
   let spots;
   if (sport === "snow") {
     spots = (await (await fetch("resorts.json?v=" + Date.now(), { cache: "no-store" })).json()).resorts;
-    spots.forEach(r => { r.says = r.says || []; r.hype = r.hype || 1; });
+    spots.forEach(r => { r.says = r.says || []; r.hype = r.hype || 1; r.curated = true; });
+    try {   // all European ski areas (OpenSkiMap), built weekly by a GitHub Action
+      const osm = await (await fetch("ski_areas.json?v=" + new Date().toISOString().slice(0, 10))).json();
+      const F = osm.fields.reduce((a, k, i) => (a[k] = i, a), {});
+      osm.areas.forEach((a, i) => {
+        const r = { id: "osm" + i, name: a[F.name], lat: a[F.lat], lon: a[F.lon], top: a[F.top], bottom: a[F.bottom], km: a[F.km], kmE: a[F.easy], kmI: a[F.inter], kmA: a[F.adv], country: a[F.cc], hype: 0, says: [] };
+        if (spots.some(c => c.curated && km(c, r) < 5)) return;   // curated entry wins
+        const bottom = r.bottom ?? r.top - 800, vert = r.top - bottom;
+        r.forecastElev = Math.round(bottom + 0.7 * vert);
+        r.freeride = r.top >= 2700 && vert >= 1500 && r.kmA >= 25 ? 4 : r.top >= 2200 && (r.kmA >= 15 || vert >= 1200) ? 3 : r.top >= 1800 && r.kmA >= 5 ? 2 : 1;
+        r.estFreeride = true;
+        r.notes = `${Math.round(r.km)} km of slopes: ${Math.round(r.kmE)} easy · ${Math.round(r.kmI)} medium · ${Math.round(r.kmA)} difficult. ${Math.round(bottom)}–${Math.round(r.top)} m.`;
+        spots.push(r);
+      });
+    } catch (e) { console.warn("ski_areas.json not available yet", e); }
+    DATA[sport] = { spots, raw: {}, failed: {}, at: new Date() };
+    return;
   } else {
     SPOTFILE = SPOTFILE || await (await fetch("spots.json?v=" + Date.now(), { cache: "no-store" })).json();
     spots = SPOTFILE[sport];
@@ -710,6 +734,22 @@ async function loadSport(sport) {
   const raw = await fetchRaw(sport, spots);
   if (!Object.keys(raw).length) throw new Error("no forecast data returned");
   DATA[sport] = { spots, raw, at: new Date() };
+}
+const snowLevelOk = r => (r.freeride || 0) >= (S.level.snow === "advanced" ? 3 : S.level.snow === "intermediate" ? 2 : 0);
+async function ensureSnow() {   // fetch forecasts for the resorts in range (plus the closest few)
+  const D = DATA.snow; if (!D) return;
+  const max = S.range.snow, any = max >= SPORTS.snow.rangeMax;
+  const cand = D.spots.filter(snowLevelOk).map(r => ({ r, d: driveMin(r) })).sort((a, b) => a.d - b.d);
+  const want = cand.filter((x, i) => i < 3 || any || x.d <= max).slice(0, 60).map(x => x.r);
+  const missing = want.filter(r => !D.raw[r.id] && !D.failed[r.id]);
+  if (!missing.length) return;
+  setLive("", `Loading forecast for ${missing.length} resorts…`);
+  for (let i = 0; i < missing.length; i += 50) {
+    const part = missing.slice(i, i + 50);
+    const raw = await fetchRaw("snow", part);
+    part.forEach(r => { if (raw[r.id]) D.raw[r.id] = raw[r.id]; else D.failed[r.id] = true; });
+  }
+  D.at = new Date();
 }
 async function loadCustom(sport, lat, lon) {
   const spot = { id: "custom", name: `Pinned point (${lat.toFixed(2)}, ${lon.toFixed(2)})`, lat, lon, custom: true, facing: null, water: "sea", freeride: 3, hype: 0, says: [],
@@ -725,10 +765,7 @@ function evaluate() {
   const sp = S.sport, lvl = S.level[sp], D = DATA[sp]; EV = {};
   if (!D) return;
   let spots = D.spots;
-  if (sp === "snow") {
-    const minFr = lvl === "advanced" ? 3 : lvl === "intermediate" ? 2 : 0;
-    spots = spots.filter(r => (r.freeride || 0) >= minFr);
-  }
+  if (sp === "snow") spots = spots.filter(snowLevelOk);
   const one = (spot, raw) => ({ spot, drive: driveMin(spot), days: sp === "snow" ? evalSnow(spot, raw, lvl) : evalWater(sp, spot, raw, lvl) });
   spots.forEach(s => { if (D.raw[s.id]) EV[s.id] = one(s, D.raw[s.id]); });
   if (CUSTOM[sp]) EV.custom = one(CUSTOM[sp].spot, CUSTOM[sp].raw);
@@ -754,7 +791,7 @@ function render() {
   $("weight").value = S.weight;
   const rg = $("range"); rg.max = cfg.rangeMax; rg.step = cfg.rangeMax > 300 ? 30 : 15; rg.value = S.range[sp];
   $("rangeOut").textContent = S.range[sp] >= cfg.rangeMax ? "any" : fmtDrive(S.range[sp]);
-  $("originName").textContent = S.origin.name;
+  $("originName").textContent = O().name;
   renderInfo();
   if (!DATA[sp]) return;
   evaluate();
@@ -795,11 +832,11 @@ function render() {
       </summary><div class="fhelp">${esc(st.t)}</div></details>`;
   }).join("");
   const sub = [
-    he.spot.custom ? "your pinned point" : `~${fmtDrive(he.drive)} from ${esc(S.origin.name)}`,
+    he.spot.custom ? "your pinned point" : `~${fmtDrive(he.drive)} from ${esc(O().name)}`,
     he.spot.exposure ? EXPOSURE[he.spot.exposure] : he.spot.country,
     he.spot.water === "lake" ? "lake" : null
   ].filter(Boolean).join(" · ");
-  const terrain = sp === "snow" && he.spot.freeride ? `<span class="terrain" title="How good the off-piste terrain is here in general — not today's conditions">⛰ freeride terrain ${"●".repeat(he.spot.freeride)}${"○".repeat(5 - he.spot.freeride)}</span>` : "";
+  const terrain = sp === "snow" && he.spot.freeride ? `<span class="terrain" title="How good the off-piste terrain is here in general — not today's conditions${he.spot.estFreeride ? ". Estimated from elevation and difficult-slope length" : ""}">⛰ freeride terrain ${"●".repeat(he.spot.freeride)}${"○".repeat(5 - he.spot.freeride)}</span>` : "";
   const facingSel = sp !== "snow" && he.spot.custom ? `<div class="facing">Shore faces (looking out to the water):
       <select id="facingSel"><option value="">not sure</option>${COMPASS.map((c, i) => `<option value="${i * 45}"${he.spot.facing === i * 45 ? " selected" : ""}>${c}</option>`).join("")}</select></div>` : "";
   const w = cfg.words;
@@ -904,7 +941,7 @@ function render() {
 let map = null, layer = null;
 function initMap() {
   if (map || !window.L) { if (!window.L) $("mapNote").textContent = "Map couldn't load (no connection to the map library)."; return; }
-  map = L.map("map", { zoomControl: true, worldCopyJump: true }).setView([S.origin.lat, S.origin.lon], 7);
+  map = L.map("map", { zoomControl: true, worldCopyJump: true }).setView([O().lat, O().lon], 7);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {   // free, no API key
     maxZoom: 18, className: "darktiles", attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
@@ -928,12 +965,13 @@ function renderMap(list) {
   initMap(); if (!map) return;
   layer.clearLayers();
   const max = S.range[S.sport], any = max >= SPORTS[S.sport].rangeMax;
-  const o = [S.origin.lat, S.origin.lon];
+  const o = [O().lat, O().lon];
+  let ring = null;
   if (!any) {
     const radiusKm = Math.max(5, (max - 10) / 60 * (max > 240 ? 90 : 75) / 1.3);
-    L.circle(o, { radius: radiusKm * 1000, color: "#ffffff", weight: 1, opacity: 0.35, dashArray: "4 6", fill: false, interactive: false }).addTo(layer);
+    ring = L.circle(o, { radius: radiusKm * 1000, color: "#ffffff", weight: 1, opacity: 0.35, dashArray: "4 6", fill: false, interactive: false }).addTo(layer);
   }
-  L.circleMarker(o, { radius: 8, color: "#07101c", weight: 3, fillColor: "#ffffff", fillOpacity: 1 }).bindTooltip(`Start: ${esc(S.origin.name)}`).addTo(layer);
+  L.circleMarker(o, { radius: 8, color: "#07101c", weight: 3, fillColor: "#ffffff", fillOpacity: 1 }).bindTooltip(`Start: ${esc(O().name)}`).addTo(layer);
   const inIds = new Set(list.map(e => e.spot.id));
   const all = Object.values(EV);
   all.forEach(e => {
@@ -953,9 +991,9 @@ function renderMap(list) {
   });
   map.invalidateSize();
   if (needFit) {
-    const pts = [o, ...list.map(e => [e.spot.lat, e.spot.lon])];
-    if (CUSTOM[S.sport]) pts.push([CUSTOM[S.sport].spot.lat, CUSTOM[S.sport].spot.lon]);
-    if (pts.length > 1) map.fitBounds(pts, { padding: [30, 30], maxZoom: 9 }); else map.setView(o, 8);
+    if (selSpot === "custom" && CUSTOM[S.sport]) map.setView([CUSTOM[S.sport].spot.lat, CUSTOM[S.sport].spot.lon], Math.max(map.getZoom(), 8));
+    else if (ring) map.fitBounds(ring.getBounds(), { padding: [10, 10] });   // start point + chosen drive radius
+    else { const pts = [o, ...list.map(e => [e.spot.lat, e.spot.lon])]; if (pts.length > 1) map.fitBounds(pts, { padding: [30, 30], maxZoom: 9 }); else map.setView(o, 8); }
     needFit = false;
   }
   setTimeout(() => map.invalidateSize(), 50);
@@ -994,7 +1032,7 @@ const INFO = {
 function renderInfo() {
   $("info").innerHTML = INFO[S.sport];
   $("footer").innerHTML = `Forecast: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> weather${S.sport !== "snow" ? " and marine" : ""} models (CC BY 4.0). ` +
-    (S.sport === "snow" ? `Snow model data at roughly each resort's upper station. "Word on the street" is paraphrased from rider guides and forums, researched Nov 2026, not live. Resorts in <code>resorts.json</code>.`
+    (S.sport === "snow" ? `Snow model data at roughly each resort's upper station. "Word on the street" is paraphrased from rider guides and forums, researched Nov 2026, not live. Hand-picked resorts around Salzburg in <code>resorts.json</code>; all other European ski areas from <a href="https://openskimap.org/" target="_blank" rel="noopener">OpenSkiMap</a> (© OpenStreetMap contributors, ODbL), updated weekly.`
                         : `Spots and shore directions in <code>spots.json</code> are rough. Lakes have no wave or water-temperature data.`) +
     ` Drive times are rough estimates. Map © OpenStreetMap contributors.`;
 }
@@ -1005,6 +1043,7 @@ async function show() {
   render();
   try {
     await loadSport(S.sport);
+    if (S.sport === "snow") await ensureSnow();
     const D = DATA[S.sport];
     setLive("ok", `Live forecast · ${Object.keys(D.raw).length} ${S.sport === "snow" ? "resorts" : "spots"} · updated ${D.at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`);
     render();
@@ -1014,7 +1053,18 @@ async function show() {
     $("hero").innerHTML = `<p class="status">Couldn't load the forecast (${esc(e.message)}). Try refreshing.</p>`;
   }
 }
-function setOrigin(o) { S.origin = o; save(); needFit = true; render(); }
+async function refresh() {
+  render();
+  if (S.sport === "snow" && DATA.snow) {
+    try { await ensureSnow(); setLive("ok", `Live forecast · ${Object.keys(DATA.snow.raw).length} resorts · updated ${DATA.snow.at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`); }
+    catch (e) { setLive("err", "Couldn't load some resort forecasts"); }
+    render();
+  }
+}
+function setOrigin(o, all) {
+  if (all) S.origins = { snow: { ...o }, surf: { ...o }, kite: { ...o } }; else S.origins[S.sport] = o;
+  save(); needFit = true; selSpot = null; refresh();
+}
 async function checkPoint(lat, lon) {
   setLive("", "Loading forecast for your point…");
   try {
@@ -1028,7 +1078,7 @@ function locate(silent) {
   if (!navigator.geolocation) { if (!silent) setLive("err", "Location not available in this browser"); return; }
   $("gpsBtn").textContent = "📍 Locating…";
   navigator.geolocation.getCurrentPosition(
-    p => { $("gpsBtn").textContent = "📍 Locate me"; setOrigin({ lat: +p.coords.latitude.toFixed(4), lon: +p.coords.longitude.toFixed(4), name: "Your location" }); },
+    p => { $("gpsBtn").textContent = "📍 Locate me"; setOrigin({ lat: +p.coords.latitude.toFixed(4), lon: +p.coords.longitude.toFixed(4), name: "Your location" }, silent); },
     () => { $("gpsBtn").textContent = "📍 Locate me"; if (!silent) setLive("err", "Couldn't get your location — search a place or tap the map instead"); },
     { timeout: 10000, maximumAge: 600000 });
 }
@@ -1052,9 +1102,9 @@ document.querySelectorAll("#sports button").forEach(b => b.onclick = () => {
   if (S.sport === b.dataset.sport) return;
   S.sport = b.dataset.sport; selSpot = null; selDay = null; needFit = true; save(); show();
 });
-document.querySelectorAll("#levels button").forEach(b => b.onclick = () => { S.level[S.sport] = b.dataset.level; selDay = null; save(); render(); });
+document.querySelectorAll("#levels button").forEach(b => b.onclick = () => { S.level[S.sport] = b.dataset.level; selDay = null; save(); refresh(); });
 $("range").addEventListener("input", ev => { S.range[S.sport] = +ev.target.value; save(); render(); });
-$("range").addEventListener("change", () => { needFit = true; render(); });
+$("range").addEventListener("change", () => { needFit = true; refresh(); });
 $("weight").addEventListener("change", ev => { S.weight = clamp(+ev.target.value || 75, 35, 140); save(); render(); });
 $("gpsBtn").onclick = () => locate(false);
 $("search").addEventListener("input", ev => { clearTimeout(searchT); searchT = setTimeout(() => search(ev.target.value.trim()), 350); });

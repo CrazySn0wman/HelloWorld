@@ -36,6 +36,23 @@ def center(g):
     return (min(lats) + max(lats)) / 2, (min(lons) + max(lons)) / 2
 
 
+def find_key(o, key):
+    """Depth-first search for the first value stored under `key`."""
+    if isinstance(o, dict):
+        if isinstance(o.get(key), str) and o.get(key):
+            return o[key]
+        for v in o.values():
+            r = find_key(v, key)
+            if r:
+                return r
+    elif isinstance(o, list):
+        for v in o:
+            r = find_key(v, key)
+            if r:
+                return r
+    return None
+
+
 def num(*vals):
     for v in vals:
         if isinstance(v, (int, float)):
@@ -65,7 +82,7 @@ def main():
         p = f.get("properties") or {}
         name = p.get("name")
         if name and ("Val Thorens" in name or "Kitzsteinhorn" in name) and len(sample) < 2:
-            sample[name] = {k: p.get(k) for k in ("type", "activities", "status", "statistics", "location")}
+            sample[name] = {"keys": sorted(p.keys()), "location": p.get("location"), "places": p.get("places")}
         if p.get("type") not in (None, "skiArea"):
             skip("type"); continue
         if "downhill" not in (p.get("activities") or []):
@@ -93,9 +110,17 @@ def main():
         total = sum(km.values())
         if total < 3 or not top:
             skip("too small / no elevation"); continue
-        cc = (p.get("location") or {}).get("iso3166_1Alpha2") or ""
+        cc = find_key(p.get("location"), "iso3166_1Alpha2") or find_key(p.get("places"), "iso3166_1Alpha2") or find_key(p, "iso3166_1Alpha2") or ""
         out.append([p.get("id") or "", name, round(lat, 4), round(lon, 4), round(top), round(bottom) if bottom else None,
                     round(total, 1), round(easy, 1), round(inter, 1), round(adv, 1), cc])
+    # merge near-duplicates (e.g. "Val Thorens" and "Val Thorens - Orelle"): keep the bigger area
+    out.sort(key=lambda a: -a[6])
+    kept = []
+    for a in out:
+        if any(abs(a[2] - b[2]) < 0.02 and abs(a[3] - b[3]) < 0.03 for b in kept):
+            skip("duplicate"); continue
+        kept.append(a)
+    out = kept
     out.sort(key=lambda a: (a[10], a[1]))
     doc = {
         "_about": "European downhill ski areas from OpenSkiMap.org (© OpenStreetMap contributors, ODbL). Built weekly by .github/workflows/ski-areas.yml. Lengths in km of downhill pistes by difficulty; elevations in metres.",
