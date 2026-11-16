@@ -100,6 +100,32 @@
     .stat b { display: block; font-size: 1.3rem; font-weight: 900; line-height: 1.15; }
     .stat b.sm { font-size: 0.95rem; padding-top: 0.25rem; }
     .stat span { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .frows { display: grid; gap: 4px; }
+    .frow { background: rgba(7, 11, 24, 0.55); border: 1px solid var(--line); border-radius: 12px; }
+    .frow summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 10px 1.5rem 1fr auto; column-gap: 0.5rem; align-items: center; padding: 0.45rem 0.75rem; }
+    .frow summary::-webkit-details-marker { display: none; }
+    .frow .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--slate); }
+    .frow.good .dot { background: var(--lime); } .frow.warn .dot { background: var(--amber); } .frow.bad .dot { background: var(--hot); }
+    .frow .fi { text-align: center; }
+    .frow .fn { font-size: 0.85rem; font-weight: 600; }
+    .frow .fn small { display: inline; color: var(--muted); font-weight: 400; margin-left: 0.4rem; font-size: 0.75rem; }
+    .frow .fv { font-weight: 900; font-size: 1rem; text-align: right; white-space: nowrap; }
+    .frow .fnote { grid-column: 3 / 5; font-size: 0.78rem; color: var(--muted); }
+    .frow.good .fnote { color: #c6ec8f; } .frow.warn .fnote { color: #fcd889; } .frow.bad .fnote { color: #fda4b4; }
+    .frow .fhelp { font-size: 0.8rem; color: #c9d3ea; padding: 0 0.75rem 0.6rem calc(0.75rem + 10px + 1.5rem + 1rem); }
+    .frow[open] { border-color: var(--accent); }
+    .scale { margin-top: 1rem; max-width: 420px; }
+    .scalebar { position: relative; height: 8px; border-radius: 99px; background: linear-gradient(90deg, var(--slate) 0 30%, var(--amber) 30% 50%, var(--ice) 50% 70%, var(--lime) 70% 100%); }
+    .scalebar span { position: absolute; top: -5px; width: 4px; height: 18px; margin-left: -2px; background: #fff; border-radius: 2px; box-shadow: 0 0 0 2px #07101c; }
+    .scalelab { display: grid; grid-template-columns: 30% 20% 20% 30%; font-size: 0.68rem; color: var(--muted); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .scalelab span:last-child { text-align: right; }
+    .scalelab span:nth-child(2), .scalelab span:nth-child(3) { text-align: center; padding: 0 2px; line-height: 1.15; }
+    @media (max-width: 520px) { .scalelab { font-size: 0.6rem; letter-spacing: 0; } }
+    .explain { margin-top: 0.7rem; font-size: 0.88rem; color: #dbe3f5; max-width: 480px; }
+    .explain summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+    .explain p { margin-top: 0.4rem; }
+    .explain .muted { color: var(--muted); font-size: 0.8rem; }
+    .terrain { white-space: nowrap; }
     .stats-title { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.45rem; }
     .backlink { margin-top: 0.8rem; font-size: 0.82rem; }
     .backlink button { background: none; border: 0; color: var(--accent); cursor: pointer; text-decoration: underline; }
@@ -151,6 +177,7 @@
     /* Map */
     .mapbox { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 0.5rem; }
     #map { height: 380px; border-radius: 14px; background: #0b1020; }
+    .darktiles { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6); }
     .map-note { font-size: 0.75rem; color: var(--muted); padding: 0.4rem 0.4rem 0.1rem; }
     .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #111830; color: var(--text); }
     .leaflet-popup-content { margin: 0.7rem 0.9rem; font-size: 0.85rem; }
@@ -266,7 +293,7 @@
 /* ===================== Config ===================== */
 const SALZBURG = { lat: 47.8095, lon: 13.055, name: "Salzburg" };
 const SPORTS = {
-  snow: { label: "Snowboard", icon: "🏂", words: ["Send it", "Good day", "So-so", "Skip it"], rangeMax: 240, rangeDef: 90, defLevel: "advanced",
+  snow: { label: "Snowboard", icon: "🏂", words: ["Send it", "Good day", "Meh", "Skip it"], rangeMax: 240, rangeDef: 90, defLevel: "advanced",
           keyIcon: "❄", rankTitle: "Where the snow is", rankLegend: "Fresh snow in the 48 h up to that morning. Spots without fresh snow are hidden." },
   surf: { label: "Surf", icon: "🏄", words: ["Firing", "Fun waves", "Marginal", "Skip it"], rangeMax: 1440, rangeDef: 600, defLevel: "beginner",
           keyIcon: "🌊", rankTitle: "Biggest waves", rankLegend: "Estimated wave size at the beach in the best 3-hour window of the day." },
@@ -366,14 +393,13 @@ function evalSnow(spot, raw, level) {
     const { score, R } = scoreSnow(x, level, spot);
     const flow = flowName(x.dir);
     const stats = [
-      { v: `${fresh} cm`, l: "fresh (48 h)", t: "Snow that fell in the last two days up to that morning. 10+ cm = soft snow, 20+ cm = real powder." },
-      { v: `${today} cm`, l: "falling that day", t: "Snow expected during the day itself. Lots of it means poor visibility and slow roads." },
-      { v: depth == null ? "–" : `${depth} cm`, l: "base (model)", t: "Total snow on the ground near the top, from the weather model (rough). Off-piste wants ~90 cm+ so you don't hit rocks. Check the resort's snow report for the real number." },
-      { v: `${tmax}°/${tmin}°`, l: "max/min at top", t: "Temperature near the upper lifts. Below about -4° keeps powder light; above 0° it gets heavy." },
-      { v: `${wind}`, l: `wind km/h (gusts ${gust})`, t: "Strongest wind near the top. 40+ km/h moves snow around and can close upper lifts; 70+ gusts usually do." },
-      { v: `${Math.round(sun)} h`, l: "sunshine", t: "Hours of sun. Sun = good visibility. Grey skies = flat light, hard to see bumps." },
-      fzl != null ? { v: `${Math.round(fzl / 100) * 100} m`, l: "freezing level", t: "Height where it goes from below to above 0°. If it's above the slopes while it snows, you get rain or wet snow." } : null,
-      flow && today >= 1 ? { v: flow, l: "storm flow", sm: true, t: "Where the storm comes from. NW–N storms dump on the northern rim (Fieberbrunn, Lofer, Hochkönig, Dachstein); S–SW storms favour the Tauern ridge and Lungau." } : null
+      { f: "fresh", i: "❄", n: "Fresh snow", v: `${fresh} cm`, l: "last 48 h", t: "Snow that fell in the last two days up to that morning. 10+ cm = soft snow, 20+ cm = real powder." },
+      { f: "base", i: "🏔", n: "Base", v: depth == null ? "–" : `${depth} cm`, l: "snow on the ground", t: "Total snow on the ground near the top, from the weather model (rough). Off-piste wants ~90 cm+ so you don't hit rocks. Check the resort's snow report for the real number." },
+      { f: "temp", i: "🌡", n: "Temperature", v: `${tmax}° / ${tmin}°`, l: "max / min at the top", t: "Temperature near the upper lifts. Below about -4° keeps powder light; above 0° it gets heavy." },
+      { f: "wind", i: "💨", n: "Wind", v: `${wind} km/h`, l: `gusts ${gust} km/h`, t: "Strongest wind near the top. 40+ km/h moves snow around and can close upper lifts; 70+ gusts usually do." },
+      { f: "sun", i: "☀", n: "Sunshine", v: `${Math.round(sun)} h`, l: sun >= 5 ? "good visibility" : sun >= 2 ? "some sun" : "mostly grey", t: "Hours of sun. Sun = good visibility. Grey skies = flat light, hard to see bumps." },
+      { f: "today", i: "🌨", n: "Snowing that day", v: `${today} cm`, l: today >= 1 && flow ? `storm from ${flow}` : today >= 1 ? "light snowfall" : "dry", t: "Snow expected during the day itself. Lots of it means poor visibility and slow roads. Storm direction matters: NW–N storms dump on the northern rim (Fieberbrunn, Lofer, Hochkönig, Dachstein); S–SW storms favour the Tauern ridge and Lungau." },
+      fzl != null ? { f: "fzl", i: "🧊", n: "Freezing level", v: `${Math.round(fzl / 100) * 100} m`, l: "rain below this height", t: "Height where it goes from below to above 0°. If it's above the slopes while it snows, you get rain or wet snow." } : null
     ].filter(Boolean);
     days.push({ date, score, R, stats, key: fresh, keyTxt: fresh < 1 ? null : `${fresh} cm`, x });
   }
@@ -381,7 +407,7 @@ function evalSnow(spot, raw, level) {
 }
 function scoreSnow(x, level, spot) {
   const R = [];
-  const add = (k, t) => R.push({ k, t });
+  let fk = null; const add = (k, t) => R.push({ k, t, f: fk });
   // Powder score (freeride view, original algorithm)
   let pow = Math.min(x.fresh, 40) / 40 * 7;
   if (x.tmax <= -4) pow += 1.5; else if (x.tmax <= -1) pow += 1; else if (x.tmax <= 1) pow += 0; else if (x.tmax <= 3) pow -= 1.5; else pow -= 3;
@@ -397,9 +423,11 @@ function scoreSnow(x, level, spot) {
   if (x.gust >= 70) cmf -= 3; else if (x.gust >= 50 || x.wind > 40) cmf -= 1.5;
 
   let s = level === "advanced" ? Math.max(pow, cmf * 0.55) : level === "beginner" ? cmf : 0.5 * pow + 0.5 * cmf + (x.fresh >= 15 ? 0.5 : 0);
+  fk = "fzl";
   if (x.rain > 1) { s -= 2; add("bad", `Rain up to the top (${r1(x.rain)} mm) — wet, heavy snow`); }
 
   // Fresh snow
+  fk = "fresh";
   if (level === "beginner") {
     if (x.fresh >= 20) add("good", `${x.fresh} cm of fresh snow — soft and forgiving on the pistes (deep snow off-piste is hard work, stay on groomed runs)`);
     else if (x.fresh >= 5) add("good", `${x.fresh} cm of fresh snow — soft, grippy pistes`);
@@ -411,6 +439,7 @@ function scoreSnow(x, level, spot) {
     else add(level === "advanced" ? "bad" : "info", `No real fresh snow (${x.fresh} cm) — ${level === "advanced" ? "groomers only, no powder" : "piste day"}`);
   }
   // Base depth (off-piste coverage)
+  fk = "base";
   if (x.depth != null) {
     if (level === "beginner") {
       if (x.depth < 20) { s -= 2; add("warn", `Thin snow cover (${x.depth} cm) — maybe only a few runs open, check the resort`); }
@@ -423,18 +452,22 @@ function scoreSnow(x, level, spot) {
     } else if (x.fresh >= 5) add("good", `Solid base (~${x.depth} cm) — off-piste properly covered`);
   }
   // Temperature
+  fk = "temp";
   if (x.tmax <= -12) add(level === "beginner" ? "warn" : "info", `Very cold (${x.tmax}°) — dress warm, short breaks`);
   else if (x.tmax <= -4) { if (x.fresh >= 5 || level !== "beginner") add("good", `Cold (${x.tmax}°) — snow stays light and dry`); }
   else if (x.tmax > 3) add(level === "beginner" ? "warn" : "bad", `Warm (${x.tmax}°) — heavy, wet snow${level === "beginner" ? ", go early before it gets slushy" : ""}`);
   else if (x.tmax > 1) add("warn", `Mild (${x.tmax}°) — snow gets heavy by midday`);
   // Wind
+  fk = "wind";
   if (x.gust >= 70) { if (level !== "beginner") s -= 2; add("bad", `Storm gusts (${x.gust} km/h) — upper lifts likely closed`); }
   else if (x.gust >= 50 || x.wind > 35) add("warn", `Windy up top (${x.wind} km/h, gusts ${x.gust}) — cold, wind-blown snow`);
   // Sky
+  fk = "today";
   if (x.today >= 10) add("warn", `Snowing hard that day (${x.today} cm) — poor visibility, slow roads`);
-  else if (x.sun >= 5) add("good", `Sunny (${Math.round(x.sun)} h of sun) — good visibility`);
+  else if ((fk = "sun") && x.sun >= 5) add("good", `Sunny (${Math.round(x.sun)} h of sun) — good visibility`);
   else if (x.sun < 1 && x.today < 2) add("warn", "Grey, flat light — hard to see bumps");
   // Avalanche
+  fk = null;
   if (level !== "beginner" && (x.fresh >= 40 || (x.fresh >= 20 && x.wind >= 30)))
     add("warn", "Lots of new snow + wind = higher avalanche danger. Check lawine.at before going off-piste");
   if (level === "advanced" && (spot.freeride || 0) >= 4 && x.fresh >= 10) add("good", "Serious freeride terrain here");
@@ -445,10 +478,11 @@ function scoreSnow(x, level, spot) {
 /* ===================== Scoring: Surf ===================== */
 const SURF_LV = { beginner: [0.3, 0.5, 1.0, 1.5], intermediate: [0.4, 0.8, 1.7, 2.4], advanced: [0.6, 1.2, 2.8, 4.5] };
 function scoreSurf(x, level, facing) {
-  const R = [], add = (k, t) => R.push({ k, t });
+  const R = []; let fk = null; const add = (k, t) => R.push({ k, t, f: fk });
   if (x.H == null) return { score: 0, R: [{ k: "bad", t: "No wave data at this point — try a spot a little further out to sea" }], chop: "–", face: null };
   const L = SURF_LV[level], T = x.T ?? 0;
   let dirF = 1, dirS = 0.75;
+  fk = "dir";
   if (facing != null && x.D != null) {
     const a = angDiff(x.D, facing);
     if (a <= 35) { dirS = 1.5; }
@@ -464,6 +498,7 @@ function scoreSurf(x, level, facing) {
   else if (eff <= L[2]) size = 4;
   else if (eff <= L[3]) size = 4 - 3 * (eff - L[2]) / (L[3] - L[2]);
   else { size = 0; tooBig = true; }
+  fk = "size";
   const hTxt = `Waves ≈ ${bodyHeight(face)} (${r1(face)} m)`;
   if (tooSmall) add("bad", `${hTxt} — too small to ride`);
   else if (tooBig) add("bad", `${hTxt} — too big and dangerous for your level`);
@@ -471,12 +506,14 @@ function scoreSurf(x, level, facing) {
   else if (eff <= L[2]) add("good", `${hTxt} — just right for your level`);
   else add("warn", `${hTxt} — big for your level, only if you feel confident`);
 
+  fk = "period";
   let per = T < 6 ? 0 : T < 8 ? 0.8 : T < 10 ? 1.4 : 2;
   if (T < 6) add("warn", `Short period (${Math.round(T)} s) — weak, close-together waves`);
   else if (T >= 11) add(level === "beginner" ? "warn" : "good", `Long period (${Math.round(T)} s) — ${level === "beginner" ? "waves hit harder than their size suggests" : "powerful, well-lined-up waves"}`);
   else if (T >= 8) add("good", `Period ${Math.round(T)} s — real groundswell, waves have push`);
 
   // Wind vs beach
+  fk = "wind";
   const W = x.W ?? 0; let wind, chop;
   if (W < 5) { wind = 2.5; chop = "glassy"; add("good", `Almost no wind (${Math.round(W)} kn) — glassy, smooth water`); }
   else if (facing == null || x.Wd == null) {
@@ -505,10 +542,12 @@ function scoreSurf(x, level, facing) {
   }
   let s = size + per + dirS + wind;
   if (x.Hw != null && x.H > 0 && x.Hw / x.H > 0.7 && T < 7) { s -= 0.5; add("warn", "Mostly local wind chop, not real swell"); }
+  fk = null;
   if (x.code >= 95) { s = Math.min(s, 3); add("warn", "Thunderstorms possible — get out of the water if you hear thunder"); }
   if (dirS < 0) s = Math.min(s, 5);
   if (tooSmall) s = Math.min(s, 1.5);
   if (tooBig) s = Math.min(s, 2);
+  fk = "water";
   const ws = wetsuit(x.sst);
   if (ws) add("info", `Water ${Math.round(x.sst)}° — ${ws}`);
   return { score: r1(clamp(s, 0, 10)), R, chop, face };
@@ -518,8 +557,9 @@ function scoreSurf(x, level, facing) {
 const KITE_LV = { beginner: [11, 13, 19, 23], intermediate: [12, 15, 25, 30], advanced: [13, 17, 32, 40] };
 function kiteSize(W) { return W > 0 ? clamp(Math.round(S.weight * 2.2 / W), 5, 17) : null; }
 function scoreKite(x, level, facing) {
-  const R = [], add = (k, t) => R.push({ k, t });
+  const R = []; let fk = null; const add = (k, t) => R.push({ k, t, f: fk });
   const L = KITE_LV[level], W = x.W ?? 0, G = Math.max(x.G ?? W, W), w = Math.round(W);
+  fk = "wind";
   let wind, cap = 10;
   if (W < L[0]) { wind = 0; cap = 1.5; add("bad", `Only ${w} kn — not enough to ride (you need about ${L[0]}+ kn)`); }
   else if (W < L[1]) { wind = 2 + 4 * (W - L[0]) / (L[1] - L[0]); add("info", `${w} kn — rideable with a big kite`); }
@@ -527,7 +567,7 @@ function scoreKite(x, level, facing) {
   else if (W <= L[3]) { wind = 6 - 4 * (W - L[2]) / (L[3] - L[2]); add("warn", `${w} kn — strong, small kite, only if confident`); }
   else { wind = 0; cap = 2; add("bad", `${w} kn — too strong for your level`); }
 
-  let gust = 0;
+  let gust = 0; fk = "gust";
   if (W >= L[0] * 0.8) {
     const gf = (G - W) / Math.max(W, 1);
     if (gf < 0.25) { gust = 2; add("good", `Steady wind (gusts only ${Math.round(G)} kn)`); }
@@ -535,7 +575,7 @@ function scoreKite(x, level, facing) {
     else if (gf < 0.6) { gust = level === "beginner" ? -1 : 0; if (level === "beginner") cap = Math.min(cap, 6); add("warn", `Gusty (${w} → ${Math.round(G)} kn) — harder to control`); }
     else { gust = level === "beginner" ? -2.5 : -1.5; if (level === "beginner") cap = Math.min(cap, 4); add("bad", `Very gusty (${w} → ${Math.round(G)} kn) — unpredictable, risky`); }
   }
-  let dir = 1;
+  let dir = 1; fk = "dir";
   if (facing != null && x.Wd != null) {
     const rel = angDiff(x.Wd, facing);
     if (rel <= 30) { dir = 0.5; add("info", `Onshore wind (from ${compass(x.Wd)}) — safe, pushes you back to the beach, but choppy and harder to get out`); }
@@ -543,11 +583,14 @@ function scoreKite(x, level, facing) {
     else if (rel <= 110) { dir = 1.5; add("good", `Side-shore (from ${compass(x.Wd)}) — good`); }
     else { dir = -3; cap = Math.min(cap, level === "beginner" ? 1 : 4); add("bad", `Offshore wind (from ${compass(x.Wd)}) — blows you away from the shore. Don't kite without a rescue boat`); }
   } else add("info", `Wind from ${compass(x.Wd)} — set the shore direction below to check on/offshore safety`);
+  fk = null;
   if (x.code >= 95) { cap = Math.min(cap, 0.5); add("bad", "Thunderstorm risk — never kite near lightning"); }
+  fk = "air";
   if (x.air != null && x.air < 10) add("warn", `Cold air (${Math.round(x.air)}°) — thick wetsuit, hood, gloves`);
+  fk = "water";
   const ws = wetsuit(x.sst);
   if (ws) add("info", `Water ${Math.round(x.sst)}° — ${ws}`);
-  const ks = kiteSize(W);
+  const ks = kiteSize(W); fk = "kite";
   if (ks && W >= L[0]) add("info", `Kite size for ${S.weight} kg: about ${ks} m²`);
   return { score: r1(clamp(Math.min(wind + gust + dir, cap), 0, 10)), R };
 }
@@ -594,24 +637,22 @@ function evalWater(sport, spot, raw, level) {
     let stats, key, keyTxt;
     if (sport === "surf") {
       stats = [
-        { v: rep.face == null ? "–" : `${r1(rep.face)} m`, l: rep.face != null ? `${bodyHeight(rep.face)} at the beach` : "wave height", t: `Estimated wave size at the beach: open-sea height ${x.H == null ? "–" : r1(x.H) + " m"}, adjusted for period and for the swell angle against this beach.` },
-        { v: x.T == null ? "–" : `${Math.round(x.T)} s`, l: "period", t: "Seconds between waves. Under 7 s = weak, messy wind swell. 9 s+ = real groundswell with push. 12 s+ = powerful." },
-        { v: compass(x.D), l: "swell from", t: `Direction the waves come from. This beach faces roughly ${facing == null ? "?" : compass(facing)}, so swell from there hits it straight on.` },
-        { v: `${Math.round(x.W ?? 0)} kn ${compass(x.Wd)}`, l: rep.chop, sm: true, t: "Wind speed and direction. Offshore (from land) or no wind = clean waves. Onshore (from the sea) = choppy." },
-        { v: x.sst == null ? "–" : `${Math.round(x.sst)}°`, l: x.sst == null ? "water" : wetsuit(x.sst), t: "Sea surface temperature and the wetsuit you'd want." },
-        { v: windowTxt, l: "best time", sm: true, t: "The best 3-hour daylight window of that day. Tides aren't included: check a tide table, many spots only work at certain tides." }
+        { f: "size", i: "🌊", n: "Wave size", v: rep.face == null ? "–" : `${r1(rep.face)} m`, l: rep.face != null ? `${bodyHeight(rep.face)} at the beach` : "no data", t: `Estimated wave size at the beach: open-sea height ${x.H == null ? "–" : r1(x.H) + " m"}, adjusted for period and for the swell angle against this beach.` },
+        { f: "period", i: "⏱", n: "Wave power", v: x.T == null ? "–" : `${Math.round(x.T)} s`, l: "period between waves", t: "Seconds between waves. Under 7 s = weak, messy wind swell. 9 s+ = real groundswell with push. 12 s+ = powerful." },
+        { f: "dir", i: "🧭", n: "Swell direction", v: compass(x.D), l: facing == null ? "beach direction unknown" : `beach faces ${compass(facing)}`, t: `Direction the waves come from. They hit a beach best when they come from the way it faces${facing == null ? "" : " (here roughly " + compass(facing) + ")"}.` },
+        { f: "wind", i: "💨", n: "Wind", v: `${Math.round(x.W ?? 0)} kn ${compass(x.Wd)}`, l: rep.chop, t: "Wind speed (knots) and where it comes from. Offshore (from land) or no wind = clean waves. Onshore (from the sea) = choppy." },
+        { f: "water", i: "🩱", n: "Water", v: x.sst == null ? "–" : `${Math.round(x.sst)}°`, l: x.sst == null ? "no data" : wetsuit(x.sst), t: "Sea surface temperature and the wetsuit you'd want." }
       ];
       key = rep.face ?? 0; keyTxt = rep.face == null ? null : `${r1(rep.face)} m`;
     } else {
       const ks = kiteSize(x.W ?? 0);
       stats = [
-        { v: `${Math.round(x.W ?? 0)} kn`, l: "wind (avg)", t: "Average wind in knots (1 kn ≈ 1.85 km/h). Learning: 12–19 kn. Most riders: 15–25 kn." },
-        { v: `${Math.round(Math.max(x.G ?? 0, x.W ?? 0))} kn`, l: "gusts", t: "Strongest gusts. The closer to the average, the smoother and safer the session." },
-        { v: compass(x.Wd), l: facing == null ? "wind from" : relLabel(x.Wd, facing), t: "Side-onshore is ideal. Offshore wind (blowing from land to water) can carry you out — dangerous." },
-        { v: ks ? `${ks} m²` : "–", l: `kite for ${S.weight} kg`, t: "Rough kite size: weight × 2.2 ÷ wind in knots. Board size and skill change this." },
-        { v: x.air == null ? "–" : `${Math.round(x.air)}°`, l: "air temp", t: "Air temperature in the best window." },
-        x.sst != null ? { v: `${Math.round(x.sst)}°`, l: wetsuit(x.sst), t: "Water temperature and the wetsuit you'd want." } : null,
-        { v: windowTxt, l: "best time", sm: true, t: "The best 3-hour daylight window of that day. Thermal lake winds usually blow in the afternoon." }
+        { f: "wind", i: "💨", n: "Wind", v: `${Math.round(x.W ?? 0)} kn`, l: "average", t: "Average wind in knots (1 kn ≈ 1.85 km/h). Learning: 12–19 kn. Most riders: 15–25 kn." },
+        { f: "gust", i: "🌬", n: "Gusts", v: `${Math.round(Math.max(x.G ?? 0, x.W ?? 0))} kn`, l: "strongest puffs", t: "Strongest gusts. The closer to the average, the smoother and safer the session." },
+        { f: "dir", i: "🧭", n: "Direction", v: compass(x.Wd), l: facing == null ? "shore direction unknown" : relLabel(x.Wd, facing), t: "Side-onshore is ideal. Offshore wind (blowing from land to water) can carry you out — dangerous." },
+        { f: "kite", i: "🪁", n: "Kite size", v: ks ? `${ks} m²` : "–", l: `for ${S.weight} kg`, t: "Rough kite size: your weight × 2.2 ÷ wind in knots. Board size and skill change this." },
+        { f: "air", i: "🌡", n: "Air", v: x.air == null ? "–" : `${Math.round(x.air)}°`, l: "in the best window", t: "Air temperature in the best window." },
+        x.sst != null ? { f: "water", i: "🩱", n: "Water", v: `${Math.round(x.sst)}°`, l: wetsuit(x.sst), t: "Water temperature and the wetsuit you'd want." } : null
       ].filter(Boolean);
       key = x.W ?? 0; keyTxt = `${Math.round(x.W ?? 0)} kn`;
     }
@@ -737,33 +778,55 @@ function render() {
 
   // Hero
   const [vText, vClass] = verdict(hd.score);
-  const order = hd.score >= 5 ? { good: 0, warn: 1, bad: 2, info: 3 } : { bad: 0, warn: 1, good: 2, info: 3 };
-  const reasons = [...hd.R].sort((a, b) => order[a.k] - order[b.k]).slice(0, 6);
+  const PRI = { bad: 0, warn: 1, good: 2, info: 3 };
+  const short = t => t.includes(" — ") ? t.split(" — ").slice(1).join(" — ") : t;
+  const statKeys = new Set(hd.stats.map(x => x.f));
+  const extras = hd.R.filter(r => !statKeys.has(r.f) && r.k !== "info").sort((a, b) => PRI[a.k] - PRI[b.k]);
+  const ups = hd.R.filter(r => r.k === "good").map(r => short(r.t).toLowerCase());
+  const downs = hd.R.filter(r => r.k === "bad" || r.k === "warn").sort((a, b) => PRI[a.k] - PRI[b.k]).map(r => short(r.t).toLowerCase());
+  const rows = hd.stats.map(st => {
+    const rs = hd.R.filter(r => r.f === st.f).sort((a, b) => PRI[a.k] - PRI[b.k]);
+    const r = rs[0];
+    return `<details class="frow ${r ? r.k : "none"}"><summary>
+        <span class="dot"></span><span class="fi">${st.i}</span>
+        <span class="fn">${esc(st.n)}<small>${esc(st.l || "")}</small></span>
+        <span class="fv">${esc(st.v)}</span>
+        ${r ? `<span class="fnote">${esc(short(r.t))}</span>` : ""}
+      </summary><div class="fhelp">${esc(st.t)}</div></details>`;
+  }).join("");
   const sub = [
     he.spot.custom ? "your pinned point" : `~${fmtDrive(he.drive)} from ${esc(S.origin.name)}`,
     he.spot.exposure ? EXPOSURE[he.spot.exposure] : he.spot.country,
-    he.spot.water === "lake" ? "lake" : null,
-    he.spot.hype ? flames(he.spot.hype) : null
+    he.spot.water === "lake" ? "lake" : null
   ].filter(Boolean).join(" · ");
+  const terrain = sp === "snow" && he.spot.freeride ? `<span class="terrain" title="How good the off-piste terrain is here in general — not today's conditions">⛰ freeride terrain ${"●".repeat(he.spot.freeride)}${"○".repeat(5 - he.spot.freeride)}</span>` : "";
   const facingSel = sp !== "snow" && he.spot.custom ? `<div class="facing">Shore faces (looking out to the water):
       <select id="facingSel"><option value="">not sure</option>${COMPASS.map((c, i) => `<option value="${i * 45}"${he.spot.facing === i * 45 ? " selected" : ""}>${c}</option>`).join("")}</select></div>` : "";
+  const w = cfg.words;
   $("hero").innerHTML = `
     <div class="herogrid">
       <div>
         <div class="kicker">${dayName(hd.date, selDay, true)} · ${new Date(hd.date + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · ${cfg.label} · ${lvl}</div>
         <div class="verdict ${vClass}">${vText}</div>
         <div class="where">${hd.score >= 3 || focus ? "" : "Best bet: "}${esc(he.spot.name)}${hd.window ? ` <span style="color:var(--muted);font-weight:400">· best ${hd.window}</span>` : ""}
-          <small>${sub}</small></div>
-        <ul class="why">${reasons.map(r => `<li><span class="ic">${ICON[r.k]}</span><span>${esc(r.t)}</span></li>`).join("")}</ul>
+          <small>${sub}${terrain ? " · " + terrain : ""}</small></div>
+        <div class="scale">
+          <div class="scalebar"><span style="left:${hd.score * 10}%"></span></div>
+          <div class="scalelab"><span>${w[3]}</span><span>${w[2]}</span><span>${w[1]}</span><span>${w[0]}</span></div>
+        </div>
+        <details class="explain"><summary>Score <b style="color:${colorV(hd.score)}">${hd.score}</b>/10 — why?</summary>
+          <p>Rated for your level: <b>${lvl}</b> (${LEVEL_TXT[sp][lvl]}). Under 3 = ${w[3]}, 3–5 = ${w[2]}, 5–7 = ${w[1]}, 7+ = ${w[0]}.</p>
+          ${ups.length ? `<p>✅ <b>Helping:</b> ${esc(ups.join("; "))}.</p>` : ""}
+          ${downs.length ? `<p>⚠️ <b>Holding it back:</b> ${esc(downs.join("; "))}.</p>` : ""}
+          <p class="muted">Switch the level at the top to see how the same day rates for someone else.</p>
+        </details>
+        ${extras.length ? `<ul class="why">${extras.map(r => `<li><span class="ic">${ICON[r.k]}</span><span>${esc(r.t)}</span></li>`).join("")}</ul>` : ""}
         ${facingSel}
         ${focus ? `<div class="backlink"><button id="backBtn">← back to the best spot of the day</button></div>` : fallback ? `<div class="backlink" style="color:var(--amber)">Nothing within ${fmtDrive(S.range[sp])} — showing the closest spots. Slide the drive time up.</div>` : ""}
       </div>
       <div>
-        <div class="stats-title">The details · score ${hd.score}/10 (hover for what it means)</div>
-        <div class="stats">
-          <div class="stat" title="0–10 for your level. 7+ = go, 5+ = good, 3+ = so-so, below = skip."><b style="color:${colorV(hd.score)}">${hd.score}</b><span>score</span></div>
-          ${hd.stats.map(s => `<div class="stat" title="${esc(s.t || "")}"><b class="${s.sm ? "sm" : ""}">${esc(s.v)}</b><span>${esc(s.l)}</span></div>`).join("")}
-        </div>
+        <div class="stats-title">Conditions · tap a row to see what it means</div>
+        <div class="frows">${rows}</div>
         ${he.spot.notes ? `<p class="says" style="margin-top:.8rem">${esc(he.spot.notes)}</p>` : ""}
       </div>
     </div>`;
@@ -807,7 +870,7 @@ function render() {
           ${d.keyTxt ? `<span class="chip key">${cfg.keyIcon} ${d.keyTxt}</span>` : ""}
           ${d.window ? `<span class="chip">best ${d.window}</span>` : ""}
           <span class="chip">🚗 ~${fmtDrive(e.drive)}</span>
-          ${e.spot.hype ? `<span class="chip" title="Freeride reputation">${flames(e.spot.hype)}</span>` : ""}
+          ${sp === "snow" && e.spot.freeride ? `<span class="chip" title="How good the off-piste terrain is in general — not today's conditions">⛰ terrain ${"●".repeat(e.spot.freeride)}${"○".repeat(5 - e.spot.freeride)}</span>` : ""}
         </div>
         <ul class="mini">${rs.map(r => `<li>${ICON[r.k]} ${esc(r.t)}</li>`).join("")}</ul>
         ${say ? `<div class="says">“${esc(say.text)}” <a href="${esc(say.url)}" target="_blank" rel="noopener">${esc(say.source)}</a></div>` : ""}
@@ -842,8 +905,8 @@ let map = null, layer = null;
 function initMap() {
   if (map || !window.L) { if (!window.L) $("mapNote").textContent = "Map couldn't load (no connection to the map library)."; return; }
   map = L.map("map", { zoomControl: true, worldCopyJump: true }).setView([S.origin.lat, S.origin.lon], 7);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 18, subdomains: "abcd", attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {   // free, no API key
+    maxZoom: 18, className: "darktiles", attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
   layer = L.layerGroup().addTo(map);
   map.on("click", ev => {
@@ -933,7 +996,7 @@ function renderInfo() {
   $("footer").innerHTML = `Forecast: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> weather${S.sport !== "snow" ? " and marine" : ""} models (CC BY 4.0). ` +
     (S.sport === "snow" ? `Snow model data at roughly each resort's upper station. "Word on the street" is paraphrased from rider guides and forums, researched Nov 2026, not live. Resorts in <code>resorts.json</code>.`
                         : `Spots and shore directions in <code>spots.json</code> are rough. Lakes have no wave or water-temperature data.`) +
-    ` Drive times are rough estimates. Map © OpenStreetMap, CARTO.`;
+    ` Drive times are rough estimates. Map © OpenStreetMap contributors.`;
 }
 
 /* ===================== Actions ===================== */
